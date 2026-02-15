@@ -32,15 +32,25 @@ exports.getResultsByStudent = async (req, res) => {
 
         let query = { student: req.user.userId };
         if (student && student.registerId) {
+            // Case-insensitive regex for registerId, ignoring surrounding whitespace
+            const cleanRegId = student.registerId.trim();
+            const regIdRegex = new RegExp(`^\\s*${cleanRegId}\\s*$`, 'i');
             query = {
                 $or: [
                     { student: req.user.userId },
-                    { registerId: student.registerId }
+                    { registerId: { $regex: regIdRegex } }
                 ]
             };
         }
 
         const results = await Result.find(query).sort({ date: -1 });
+
+        // Debug Information (Temporary)
+        if (results.length === 0) {
+            console.log(`No results found for User: ${req.user.userId}, RegID: ${student?.registerId}`);
+            // We can Return metadata to help frontend debug if needed, but for now just adhere to JSON array contract
+        }
+
         res.json(results);
     } catch (err) {
         console.error(err);
@@ -118,9 +128,11 @@ const uploadResultPDF = async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-        // 1. Parse PDF using new logic
+        const { batchId } = req.body;
+
         // 1. Parse PDF using new logic
         const { rawStudents, metadata } = await processedData(req.file.buffer);
+        console.log(`Parsed ${rawStudents.length} students from PDF.`);
 
         // 2. Generate Excel Buffer (Advanced)
         // Pass the full object including metadata
@@ -143,30 +155,48 @@ const uploadResultPDF = async (req, res) => {
                     name: code,
                     grade: grade
                 })),
+                sgpa: studentData.sgpa,
+                totalCredits: studentData.totalCredits,
                 published: true,
                 date: new Date()
             };
 
-            // If we found a student, link them. If not, just store the registerId.
+            // If we found a student, link them.
             if (student) {
                 resultPayload.student = student._id;
-                resultPayload.batch = student.batch; // Attempt to link batch if available
+            } else {
+                // console.log(`Warning: Student with Register ID ${studentData.registerId} not found in DB.`);
             }
 
-            // Upsert: Join on registerId + type. 
-            // We use registerId as the primary key for the result now.
+            // Link Batch: Use selected batchId if available, otherwise fallback to student's batch
+            if (batchId) {
+                resultPayload.batch = batchId;
+            } else if (student && student.batch) {
+                resultPayload.batch = student.batch;
+            }
+
+            // Upsert: Join on registerId + type + title (to allow multiple semesters)
             bulkOperations.push({
                 updateOne: {
-                    filter: { registerId: studentData.registerId, type: 'university' },
+                    filter: {
+                        registerId: studentData.registerId,
+                        type: 'university',
+                        title: resultPayload.title
+                    },
                     update: { $set: resultPayload },
                     upsert: true
                 }
             });
         } // End of For Loop
 
+        console.log(`Prepared ${bulkOperations.length} bulk operations.`);
+
         // Execute Bulk Write
         if (bulkOperations.length > 0) {
-            await Result.bulkWrite(bulkOperations);
+            const bulkResult = await Result.bulkWrite(bulkOperations);
+            console.log(`Bulk Write Result: Matched ${bulkResult.matchedCount}, Modified ${bulkResult.modifiedCount}, Upserted ${bulkResult.upsertedCount}`);
+        } else {
+            console.log("No bulk operations to execute.");
         }
 
         // 4. Return Excel file
@@ -174,8 +204,12 @@ const uploadResultPDF = async (req, res) => {
         res.setHeader('Content-Disposition', 'attachment; filename=university_results.xlsx');
         res.send(excelBuffer);
 
+
     } catch (error) {
         console.error(error);
+        const fs = require('fs');
+        const path = require('path');
+        fs.appendFileSync(path.join(__dirname, '../debug_error.log'), `${new Date().toISOString()} - Upload Error: ${error.message}\n${error.stack}\n\n`);
         res.status(500).json({ message: 'Error processing PDF', error: error.message });
     }
 };

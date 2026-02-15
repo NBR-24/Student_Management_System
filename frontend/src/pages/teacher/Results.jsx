@@ -2,17 +2,29 @@ import { useState } from 'react';
 import axios from '../../api/axios';
 import { Upload, FileText } from 'lucide-react';
 
-const TeacherResults = () => {
+const TeacherResults = ({ batches }) => {
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [examType, setExamType] = useState('university');
+    const [semester, setSemester] = useState('S1');
+    const [selectedBatch, setSelectedBatch] = useState('');
 
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (!file) return;
+        if (!file || !selectedBatch) {
+            setMessage('ERROR: Please select a batch and upload a file.');
+            return;
+        }
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('examType', examType);
+        formData.append('batchId', selectedBatch);
+        if (examType === 'university') {
+            formData.append('semester', semester);
+        }
+
         setMessage('Processing PDF... Dictionary match taking place...');
         setLoading(true);
 
@@ -26,7 +38,7 @@ const TeacherResults = () => {
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', 'university_results.xlsx');
+            link.setAttribute('download', `${examType}_results_${semester}.xlsx`);
             document.body.appendChild(link);
             link.click();
 
@@ -41,7 +53,7 @@ const TeacherResults = () => {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">University Results Management</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Result Management</h2>
 
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl">
                 <div className="flex items-center mb-6">
@@ -50,11 +62,59 @@ const TeacherResults = () => {
                     </div>
                     <div>
                         <h3 className="font-bold text-gray-900 text-lg">Upload Result PDF</h3>
-                        <p className="text-gray-500 text-sm">Upload university PDF to auto-generate Excel & publish.</p>
+                        <p className="text-gray-500 text-sm">Upload result PDF to auto-generate Excel & publish.</p>
                     </div>
                 </div>
 
                 <form onSubmit={handleUpload} className="space-y-6">
+                    {/* Batch Selection */}
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Target Batch</label>
+                        <select
+                            value={selectedBatch}
+                            onChange={(e) => setSelectedBatch(e.target.value)}
+                            required
+                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border-transparent focus:ring-4 focus:ring-primary-50 outline-none cursor-pointer"
+                        >
+                            <option value="">Select a batch...</option>
+                            {batches?.map(batch => (
+                                <option key={batch._id} value={batch._id}>{batch.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Exam Type Selection */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div
+                            onClick={() => setExamType('university')}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all text-center ${examType === 'university' ? 'border-primary-600 bg-primary-50 text-primary-700 font-bold' : 'border-gray-100 hover:border-gray-200 text-gray-500'}`}
+                        >
+                            University Result
+                        </div>
+                        <div
+                            onClick={() => setExamType('internal')}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all text-center ${examType === 'internal' ? 'border-primary-600 bg-primary-50 text-primary-700 font-bold' : 'border-gray-100 hover:border-gray-200 text-gray-500'}`}
+                        >
+                            Internal Results
+                        </div>
+                    </div>
+
+                    {/* Semester Dropdown (Only for University) */}
+                    {examType === 'university' && (
+                        <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Semester</label>
+                            <select
+                                value={semester}
+                                onChange={(e) => setSemester(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border-transparent focus:ring-4 focus:ring-primary-50 outline-none cursor-pointer"
+                            >
+                                {['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'].map(sem => (
+                                    <option key={sem} value={sem}>{sem}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:bg-gray-50 transition-colors relative cursor-pointer group">
                         <input
                             type="file"

@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 
 exports.createBatch = async (req, res) => {
-    const { name } = req.body; // Branch is auto-assigned
+    const { name, scheme } = req.body; // Branch is auto-assigned
     try {
         // Fetch the teacher to get their department
         const teacher = await User.findById(req.user.userId);
@@ -18,6 +18,7 @@ exports.createBatch = async (req, res) => {
 
         const newBatch = new Batch({
             name,
+            scheme,
             branch: teacher.department, // Auto-assign department
             createdBy: req.user.userId
         });

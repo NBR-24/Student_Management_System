@@ -32,24 +32,46 @@ const StudentResults = () => {
                     <div key={idx} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
                         <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-50">
                             <div>
-                                <span className="text-xs font-bold text-primary-600 uppercase tracking-wider bg-primary-50 px-2 py-1 rounded-md">
-                                    {result.examType}
+                                <h3 className="text-lg font-bold text-gray-800">{result.title}</h3>
+                                <span className="text-xs font-bold text-primary-600 uppercase tracking-wider bg-primary-50 px-2 py-1 rounded-md mt-1 inline-block">
+                                    {result.type}
                                 </span>
                                 <p className="text-gray-400 text-xs mt-2">Published on {new Date(result.date).toLocaleDateString()}</p>
                             </div>
-                            <Trophy className="h-6 w-6 text-yellow-500" />
+                            <div className="text-right flex items-center gap-4">
+                                <div>
+                                    <p className="text-2xl font-bold text-primary-600">{result.sgpa?.toFixed(2) || 'N/A'}</p>
+                                    <p className="text-xs text-gray-400 font-bold">SGPA</p>
+                                </div>
+                                <div>
+                                    <p className="text-xl font-bold text-gray-700">{result.totalCredits || 0}</p>
+                                    <p className="text-xs text-gray-400 font-bold">Credits</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="space-y-3">
-                            {result.subjects.map((sub, sIdx) => (
-                                <div key={sIdx} className="flex justify-between items-center py-2">
-                                    <span className="font-medium text-gray-700">{sub.subCode}</span>
-                                    <span className={`font-bold px-3 py-1 rounded-lg text-sm ${['F', 'Absent'].includes(sub.grade) ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'
-                                        }`}>
-                                        {sub.grade}
-                                    </span>
-                                </div>
-                            ))}
+                            <div className="grid grid-cols-12 gap-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                <div className="col-span-6">Subject</div>
+                                <div className="col-span-3 text-center">Grade</div>
+                                <div className="col-span-3 text-right">Points</div>
+                            </div>
+                            {result.subjects.map((sub, sIdx) => {
+                                const points = { 'S': 10, 'A+': 9, 'A': 8.5, 'B+': 8, 'B': 7.5, 'C+': 7, 'C': 6.5, 'D': 6, 'P': 5.5, 'F': 0, 'FE': 0, 'I': 0, 'Absent': 0 }[sub.grade] || 0;
+                                return (
+                                    <div key={sIdx} className="grid grid-cols-12 gap-4 items-center py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 px-2 rounded-lg transition-colors">
+                                        <div className="col-span-6 font-medium text-gray-700">{sub.subCode}</div>
+                                        <div className="col-span-3 text-center">
+                                            <span className={`font-bold px-2 py-1 rounded text-xs ${['F', 'FE', 'I', 'Absent'].includes(sub.grade) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                                {sub.grade}
+                                            </span>
+                                        </div>
+                                        <div className="col-span-3 text-right font-semibold text-gray-600">
+                                            {points}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 ))}
@@ -63,7 +85,7 @@ const StudentResults = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

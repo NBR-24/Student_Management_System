@@ -60,6 +60,9 @@ const processedData = async (buffer) => {
         const data = await pdf(buffer);
         const fullText = data.text;
 
+        // DEBUG: Write text to file
+        fs.writeFileSync(path.join(__dirname, '../debug_pdf_text.txt'), fullText);
+
         // Extract Metadata from first 1000 chars roughly
         const headerText = fullText.substring(0, 1500);
         const { semester, scheme, examName } = detectMetadata(headerText);
@@ -92,7 +95,7 @@ const processedData = async (buffer) => {
         const rawStudents = [];
 
         // Matches "PKD24CE001" or "PKD19CS001" etc.
-        const regNoPattern = /(PKD\d{2}([A-Z]{2})\d{3})/g;
+        const regNoPattern = /(PKD\d{2}([A-Z]{2})\d{3})/g; // Modified to standard regex object for exec loop
 
         // Matches "CODE(GRADE)" e.g. "MAT101(A+)" or "EST 130(B)"
 
@@ -169,6 +172,11 @@ const processedData = async (buffer) => {
 
     } catch (error) {
         console.error("Processing Error:", error);
+        const fs = require('fs');
+        const path = require('path');
+        try {
+            fs.appendFileSync(path.join(__dirname, '../debug_error.log'), `${new Date().toISOString()} - Processing Error: ${error.message}\n${error.stack}\n\n`);
+        } catch (e) { console.error("Could not write to log file", e); }
         throw error;
     }
 };
@@ -255,34 +263,34 @@ const generateExcel = async (processedData) => {
             }
         });
 
+        const lastRow = tableStartRow + 1 + studentList.length;
+
         // --- Toppers Analysis ---
-        let currentRow = tableStartRow + studentList.length + 3;
-        const toppersHeader = worksheet.getCell(`A${currentRow}`);
-        toppersHeader.value = "TOP 10 PERFORMERS";
-        toppersHeader.font = { bold: true, color: { argb: 'FF0000FF' } }; // Blue
+        let currentRow = lastRow + 3;
+        worksheet.getCell(`A${currentRow}`).value = "TOP 10 PERFORMERS";
+        worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF0000FF' } }; // Blue
 
         const toppers = studentList.filter(s => s.isPass).sort((a, b) => b.sgpa - a.sgpa).slice(0, 10);
         toppers.forEach((t, i) => {
-            const r = worksheet.getRow(currentRow + 1 + i);
-            r.getCell(1).value = `${i + 1}. ${t.registerId}`;
-            r.getCell(2).value = `SGPA: ${t.sgpa}`;
+            currentRow++;
+            worksheet.getCell(`A${currentRow}`).value = `${i + 1}. ${t.registerId}`;
+            worksheet.getCell(`B${currentRow}`).value = `SGPA: ${t.sgpa}`;
         });
 
         // --- Subject Failure Analysis ---
-        currentRow += toppers.length + 3;
-        const failHeader = worksheet.getCell(`A${currentRow}`);
-        failHeader.value = "SUBJECT-WISE FAILURE ANALYSIS";
-        failHeader.font = { bold: true, color: { argb: 'FFFF0000' } }; // Red
+        currentRow += 2;
+        worksheet.getCell(`A${currentRow}`).value = "SUBJECT-WISE FAILURE ANALYSIS";
+        worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FFFF0000' } }; // Red
 
         deptCourses.forEach((code, i) => {
+            currentRow++;
             const failCount = studentList.filter(s => {
                 const g = s.grades[code];
                 return g && ['F', 'FE', 'I', 'ABSENT'].includes(g);
             }).length;
 
-            const r = worksheet.getRow(currentRow + 1 + i);
-            r.getCell(1).value = code;
-            r.getCell(2).value = `${failCount} Failed`;
+            worksheet.getCell(`A${currentRow}`).value = code;
+            worksheet.getCell(`B${currentRow}`).value = `${failCount} Failed`;
         });
     }
 
