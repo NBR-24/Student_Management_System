@@ -79,15 +79,43 @@ const processedData = async (buffer) => {
             console.warn(`Credit file not found for scheme ${scheme}, using empty defaults.`);
         }
 
-        const semesterTotals = fullJsonData.semester_total_credits || {};
+        // --- Build Semester Totals Map ---
+        let semesterTotals = fullJsonData.semester_total_credits || {};
 
-        // Build Credit Lookup
+        // 2019 Scheme does not have a global semester_total_credits map
+        // We need to extract it from the first available department if missing
+        if (Object.keys(semesterTotals).length === 0 && fullJsonData.departments) {
+            const firstDept = fullJsonData.departments[0];
+            if (firstDept && firstDept.semesters) {
+                firstDept.semesters.forEach(s => {
+                    // Convert integer semester to "S1", "S2" format
+                    const semKey = `S${s.semester}`;
+                    semesterTotals[semKey] = s.total_credit;
+                });
+            }
+        }
+
+        // Also ensure 2024 integer keys (if any) are mapped to S-prefix if needed, 
+        // though 2024 file seems to use "S1" keys in global map.
+
+
+        // --- Build Credit Lookup ---
         const creditLookup = {};
-        const curricula = fullJsonData.curricula || [];
-        curricula.forEach(dept => {
+
+        // Handle 2024 "curricula" vs 2019 "departments"
+        const curriculaList = fullJsonData.curricula || fullJsonData.departments || [];
+
+        curriculaList.forEach(dept => {
             (dept.semesters || []).forEach(sem => {
                 (sem.courses || []).forEach(course => {
-                    creditLookup[course.code.replace(/\s/g, "")] = course.credits;
+                    // Normalize keys: 2024 uses "code"/"credits", 2019 uses "course_code"/"credit"
+                    const code = course.code || course.course_code;
+                    const credit = course.credits || course.credit;
+
+                    if (code) {
+                        const cleanCode = code.replace(/\s/g, "");
+                        creditLookup[cleanCode] = credit;
+                    }
                 });
             });
         });
@@ -131,31 +159,42 @@ const processedData = async (buffer) => {
             }
 
             if (Object.keys(grades).length > 0) {
+                // --- SGPA CALCULATION (Fixed Denominator) ---
                 let totalWeightedPoints = 0;
-                let totalCreds = 0;
+                let totalCreds = 0; // Earned Credits
 
-                // Denominator Logic
-                let officialDenom = semesterTotals[semester] || 21; // Default 21
-                if (scheme === "2024" && semester === "S2") officialDenom = 24;
+                // Denominator Logic: Use fixed value from JSON
+                let officialDenom = semesterTotals[semester] || 0;
 
-                // Check Pass
+                // Fallback / Validation
+                if (officialDenom === 0) {
+                    // Try to guess or warn? For now, we stick to the user instruction: "i have given fixed credit in json"
+                    // If 0, SGPA will be 0/NaN potentially.
+                    if (scheme === "2024" && semester === "S2") officialDenom = 24; // Hardcoded fallback if JSON fails/is missing
+                    else officialDenom = 21; // Robust fallback
+                }
+
+
                 const failGrades = ['F', 'FE', 'I', 'ABSENT', 'WITHHELD'];
                 const isPass = !Object.values(grades).some(g => failGrades.includes(g));
 
                 for (const [code, grade] of Object.entries(grades)) {
                     const creds = getCourseCredits(code, creditLookup);
                     const gp = GRADE_POINTS[grade] || 0;
+
                     totalWeightedPoints += (creds * gp);
-                    if (gp > 0) totalCreds += creds;
+
+                    if (gp > 0) {
+                        totalCreds += creds;
+                    }
                 }
 
-                // 2024 S2 Injection
-                if (scheme === "2024" && semester === "S2") {
-                    totalCreds += 1;
-                    totalWeightedPoints += (1 * 5.5);
+
+                let sgpa = 0.0;
+                if (officialDenom > 0) {
+                    sgpa = parseFloat((totalWeightedPoints / officialDenom).toFixed(2));
                 }
 
-                const sgpa = officialDenom > 0 ? parseFloat((totalWeightedPoints / officialDenom).toFixed(2)) : 0.0;
 
                 rawStudents.push({
                     registerId: student.regNo,
