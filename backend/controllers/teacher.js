@@ -73,7 +73,14 @@ exports.deleteStudent = async (req, res) => {
 
 exports.getBatches = async (req, res) => {
     try {
-        const batches = await Batch.find({ createdBy: req.user.userId });
+        let query = { createdBy: req.user.userId };
+
+        // Allow Admin, Exam Controller, and HOD to see ALL batches
+        if (['admin', 'exam_controller', 'hod'].includes(req.user.role)) {
+            query = {};
+        }
+
+        const batches = await Batch.find(query);
         res.json(batches);
     } catch (err) {
         console.error(err.message);

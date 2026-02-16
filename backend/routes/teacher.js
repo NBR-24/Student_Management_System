@@ -22,9 +22,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.post('/batch', auth('teacher'), teacherController.createBatch);
-router.get('/batch', auth('teacher'), teacherController.getBatches);
-router.get('/batch/:batchId', auth('teacher'), teacherController.getBatchDetails);
-router.post('/batch/:batchId/upload', auth('teacher'), upload.single('file'), teacherController.uploadStudents);
+router.get('/batch', auth(['teacher', 'admin', 'exam_controller', 'hod']), teacherController.getBatches);
+router.get('/batch/:batchId', auth(['teacher', 'admin', 'exam_controller', 'hod']), teacherController.getBatchDetails);
+router.post('/batch/:batchId/upload', auth(['teacher', 'admin']), upload.single('file'), teacherController.uploadStudents);
 router.put('/student/:studentId', auth('teacher'), teacherController.updateStudent);
 router.delete('/student/:studentId', auth('teacher'), teacherController.deleteStudent);
 

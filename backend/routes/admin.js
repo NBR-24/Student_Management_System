@@ -4,9 +4,10 @@ const adminController = require('../controllers/admin');
 const auth = require('../middleware/auth');
 
 // Protected route: Only admin can access
-router.post('/teacher', auth('admin'), adminController.addTeacher);
-router.get('/teacher', auth('admin'), adminController.getTeachers);
-router.put('/teacher/:id', auth('admin'), adminController.updateTeacher);
-router.delete('/teacher/:id', auth('admin'), adminController.deleteTeacher);
+// Protected route: Only admin can access
+router.post('/staff', auth('admin'), adminController.addStaff);
+router.get('/staff', auth('admin'), adminController.getStaff);
+router.put('/staff/:id', auth('admin'), adminController.updateStaff);
+router.delete('/staff/:id', auth('admin'), adminController.deleteStaff);
 
 module.exports = router;
