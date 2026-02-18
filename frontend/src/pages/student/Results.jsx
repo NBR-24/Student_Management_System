@@ -37,7 +37,7 @@ const StudentResults = () => {
                                 </span>
                                 <p className="text-gray-400 text-xs mt-2">Published on {new Date(result.date).toLocaleDateString()}</p>
                             </div>
-                            <Trophy className="h-6 w-6 text-yellow-500" />
+                            <Trophy className="h-6 w-6 text-primary-500" />
                         </div>
 
                         <div className="space-y-3">
