@@ -45,7 +45,7 @@ const TeacherResults = () => {
 
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-2xl">
                 <div className="flex items-center mb-6">
-                    <div className="h-12 w-12 bg-violet-100 text-violet-600 rounded-2xl flex items-center justify-center mr-4">
+                    <div className="h-12 w-12 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mr-4">
                         <Upload className="h-6 w-6" />
                     </div>
                     <div>
@@ -74,7 +74,7 @@ const TeacherResults = () => {
                     </div>
 
                     {message && (
-                        <div className={`p-4 rounded-xl text-sm font-bold text-center ${message.includes('SUCCESS') ? 'bg-green-100 text-green-700' : 'bg-violet-100 text-violet-700'}`}>
+                        <div className={`p-4 rounded-xl text-sm font-bold text-center ${message.includes('SUCCESS') ? 'bg-green-100 text-green-700' : 'bg-primary-50 text-primary-700'}`}>
                             {message}
                         </div>
                     )}
