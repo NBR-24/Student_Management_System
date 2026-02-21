@@ -31,10 +31,24 @@ const detectMetadata = (text) => {
         scheme = "2024";
     }
 
-    // Detect Exam Name
-    const examName = text.includes("B.Tech") ? "B.Tech Degree Examination" : "University Examination";
+    // Extract the full exam title line from the PDF header
+    // Matches lines like: "B.Tech S2 (R) Exam May 2025 (2024 Scheme)"
+    // or "B.Tech S3 Supplementary Examination November 2024 (2019 Scheme)"
+    let examTitle = null;
+    const titleMatch = text.match(/B\.Tech[^\n\r]+(?:Exam|Examination)[^\n\r]*/i);
+    if (titleMatch) {
+        examTitle = titleMatch[0].replace(/\s+/g, ' ').trim();
+    }
 
-    return { semester, scheme, examName };
+    // Fallback if pattern not found
+    if (!examTitle) {
+        examTitle = `B.Tech ${semester} University Examination (${scheme} Scheme)`;
+    }
+
+    // Keep a short examName for Excel header use
+    const examName = examTitle;
+
+    return { semester, scheme, examName, examTitle };
 };
 
 const getCourseCredits = (code, lookup) => {
@@ -65,9 +79,9 @@ const processedData = async (buffer) => {
 
         // Extract Metadata from first 1000 chars roughly
         const headerText = fullText.substring(0, 1500);
-        const { semester, scheme, examName } = detectMetadata(headerText);
+        const { semester, scheme, examName, examTitle } = detectMetadata(headerText);
 
-        console.log(`Detected: ${semester} | ${scheme} | ${examName}`);
+        console.log(`Detected: ${semester} | ${scheme} | ${examName} | ${examTitle}`);
 
         // Load Credit Config
         const jsonPath = path.join(__dirname, `../credits_${scheme}.json`);
@@ -207,7 +221,7 @@ const processedData = async (buffer) => {
             }
         }
 
-        return { rawStudents, metadata: { semester, scheme, examName } };
+        return { rawStudents, metadata: { semester, scheme, examName, examTitle } };
 
     } catch (error) {
         console.error("Processing Error:", error);

@@ -1,0 +1,275 @@
+# Software Design Document (SDD)
+## for Scalable Academic Management System (SAMS)
+
+**Version 1.0**
+
+**Prepared by Team 10**
+**Department of Computer Science and Engineering**
+**Government Engineering College, Sreekrishnapuram , under APJ Abdul Kalam Technological University**
+**February 2026**
+
+---
+
+## 1. INTRODUCTION
+
+### 1.1 Purpose
+The purpose of this Software Design Document (SDD) is to describe the architectural and detailed design of the **Scalable Academic Management System (SAMS)**. It provides a blueprint for the implementation of the system, covering data structures, software components, and interfaces.
+
+**Intended Audience**:
+-   **Development Team**: For implementing the backend API and frontend UI.
+-   **Project Guide & Evaluation Committee**: For assessing the technical depth and design soundness of the project.
+-   **Future Maintainers**: For understanding the system structure for future extensions (e.g., Attendance module).
+
+### 1.2 Scope
+SAMS is a web-based academic management platform designed to streamline result processing and student data tracking.
+**Current Scope (Implemented)**:
+-   **Authentication**: Secure, role-based access for Students, Teachers, Exam Controllers, and Admins.
+-   **Exam Controller Workflow**: Uploading and parsing official KTU Result PDFs.
+-   **Teacher Workflow**: Creating student batches and registering students via Excel upload.
+-   **Student Workflow**: Viewing unified academic results from a personal dashboard.
+-   **Admin Workflow**: Managing system users and staff.
+
+**Planned Scope (Designed)**:
+-   **Internal Marks Integration**: Uploading internal assessment scores via Excel (Teacher).
+-   **Request Management**: A system for students to submit academic requests (e.g., grace marks, grievances) to authorities.
+
+### 1.3 Overview
+This document is organized as follows:
+-   **Section 2**: System Overview & Context.
+-   **Section 3**: System Architecture (Client-Server-DB).
+-   **Section 4**: Data Design (Schema & Dictionary).
+-   **Section 5**: Component Design (Module Descriptions).
+-   **Section 6**: Human Interface Design (UI Flows).
+-   **Section 7**: Requirements Matrix (Traceability).
+-   **Section 8**: Appendices (Diagrams & Notes).
+
+### 1.4 Reference Material
+1.  **System Requirements Specification (SRS)** for SAMS (Version 1.2).
+2.  **IEEE Std 1016-2009**: IEEE Standard for Information Technology—Systems Design—Software Design Descriptions.
+3.  **KTU B.Tech Regulations**: For grading logic (SGPA calculation).
+4.  **Project Codebase**: `d:\Student Management System`.
+
+### 1.5 Definitions and Acronyms
+-   **SAMS**: Scalable Academic Management System.
+-   **KTU Official**: Results published by the university (external source).
+-   **Series/Internal**: Continuous assessment marks (internal source).
+-   **Unified Marks Collection**: A database design strategy ([Result](file:///d:/Student%20Management%20System/backend/controllers/academic.js#7-28) collection) storing both external and internal marks.
+-   **JWT**: JSON Web Token (used for stateless authentication).
+-   **RBAC**: Role-Based Access Control.
+-   **SPA**: Single Page Application.
+
+---
+
+## 2. SYSTEM OVERVIEW
+
+SAMS functions as a centralized repository for academic data, replacing disparate Excel files and manual record-keeping. It operates as a three-tier web application:
+1.  **Presentation Layer**: A React-based Single Page Application (SPA) accessible via web browsers.
+2.  **Logic Layer**: A Node.js/Express server that handles business logic, file parsing (PDF/Excel), and API routing.
+3.  **Data Layer**: A MongoDB database storing Users, Batches, and Results.
+
+**Context**:
+The system is designed to work independently of the university's live portal. The **Exam Controller** downloads result PDFs from the university portal and uploads them to SAMS. SAMS then parses these files to populate the local database, allowing **Students** to view their results anytime. **Teachers** manage the student registry by creating batches and uploading student lists.
+
+---
+
+## 3. SYSTEM ARCHITECTURE
+
+### 3.1 Architectural Design
+The system follows a **Modular Monolithic** architecture using the **MERN** stack.
+
+#### Client Layer (Frontend)
+-   **Framework**: React + Vite.
+-   **Responsibility**: Rendering UI, managing client state (Redux/Context), consuming REST APIs.
+-   **Key Modules**:
+    -   `AuthModule`: Login forms, Token storage.
+    -   `StudentDashboard`: Result tables, Graphs, Request forms.
+    -   `StaffDashboard`: Upload interfaces (PDF/Excel), Batch management views.
+
+#### Application Layer (Backend)
+-   **Runtime**: Node.js + Express.
+-   **Responsibility**: Request handling, authentication, file processing, database interactions.
+-   **Modules**:
+    -   `AuthService`: JWT issuance, Password hashing (`bcryptjs`).
+    -   `AcademicService`: Result creation, retrieval, and PDF parsing logic (`pdf-parse`).
+    -   `TeacherService`: Batch creation, Student Excel parsing (`xlsx`).
+    -   `AdminService`: User management (CRUD).
+    -   `RequestService` (Planned): Handling student requests.
+
+#### Data Layer (Database)
+-   **Database**: MongoDB.
+-   **Responsibility**: Persistent storage of JSON-like documents.
+-   **Collections**: `users`, `batches`, `results`, `assignments` (future), `requests` (future).
+
+*(Architecture Diagrams are referenced in Appendix A)*
+
+### 3.2 Decomposition Description
+
+#### Routing Layer
+-   `/api/auth`: Login endpoint changes.
+-   `/api/result`:
+    -   POST `/upload` (Exam Controller): Handles PDF uploads.
+    -   GET `/student` (Student): Fetches personal results.
+-   `/api/batch`:
+    -   POST `/` (Teacher): Creates a new batch.
+    -   POST `/:id/upload` (Teacher): Bulk registers students via Excel.
+-   `/api/admin`:
+    -   POST `/staff`: Creates staff accounts.
+
+#### Controllers
+-   **AcademicController**:
+    -   [uploadResultPDF()](file:///d:/Student%20Management%20System/backend/controllers/academic.js#130-254): Orchestrates PDF buffer processing and bulk DB writes.
+    -   [getResultsByStudent()](file:///d:/Student%20Management%20System/backend/controllers/academic.js#29-64): Queries [Result](file:///d:/Student%20Management%20System/backend/controllers/academic.js#7-28) collection by Student ID.
+-   **TeacherController**:
+    -   [createBatch()](file:///d:/Student%20Management%20System/backend/controllers/teacher.js#7-33): Validates input and creates Batch document.
+    -   [uploadStudents()](file:///d:/Student%20Management%20System/backend/controllers/teacher.js#91-172): Parses Excel, creates User documents, and links them to Batch.
+
+#### Services
+-   **PDFParserService** (Utility):
+    -   Extracts text from PDF buffer.
+    -   Uses regex (`PKD\d{2}[A-Z]{2}\d{3}`) to identify students.
+    -   Uses regex (`[A-Z]{3}\d{3}\([A-F]\)`) to extract grades.
+-   **ExcelParserService** (Utility):
+    -   Reads `.xlsx` files.
+    -   Maps headers (`Register No`, `Name`) to User schema fields.
+
+### 3.3 Design Rationale
+-   **Node.js/Express**: Chosen for its non-blocking I/O, which is ideal for handling concurrent file uploads and JSON-heavy API responses.
+-   **MongoDB**: Selected for its flexible schema. The [Result](file:///d:/Student%20Management%20System/backend/controllers/academic.js#7-28) document structure can vary (different subjects per semester) without requiring complex schema migrations.
+-   **JWT Auth**: Stateless authentication allows the system to scale easily and enables future mobile app integration without session state on the server.
+-   **Separate Result Collection**: Storing results separately from Users allows for efficient querying and aggregation (e.g., "Find all failures in Subject X").
+
+---
+
+## 4. DATA DESIGN
+
+### 4.1 Data Description
+-   **Users**: The system stores all actors (Student, Teacher, Admin) in a single `User` collection, distinguished by a `role` field.
+-   **Result Data**: Unified storage for all exam types. Fields `type` ('university', 'series') and `source` distinguish the origin of the marks.
+-   **Batches**: Grouping mechanism for students. A Student belongs to one Batch, facilitating class-wise management.
+
+### 4.2 Data Dictionary
+
+| Entity | Field | Type | Description |
+| :--- | :--- | :--- | :--- |
+| **User** | `_id` | ObjectId | Unique Identifier. |
+| | `email` | String | Unique login credential. |
+| | `password` | String | Bcrypt-hashed string. |
+| | `role` | String | Enum: 'student', 'teacher', 'admin', 'exam_controller'. |
+| | `registerId` | String | University Register No (Unique for Students). |
+| | `batch` | ObjectId | Reference to [Batches](file:///d:/Student%20Management%20System/backend/controllers/teacher.js#74-90) collection. |
+| **Result** | `_id` | ObjectId | Unique Identifier. |
+| | `student` | ObjectId | Reference to `Users`. |
+| | `registerId` | String | Redundant link for robustness (parsed from PDF). |
+| | `type` | String | Enum: 'university', 'series'. |
+| | `title` | String | e.g., "S4 Result", "Series 1". |
+| | `subjects` | Array | List of `{ subCode, grade, marks }`. |
+| | `sgpa` | Number | Calculated SGPA. |
+| **Batch** | `_id` | ObjectId | Unique Identifier. |
+| | [name](file:///d:/Student%20Management%20System/backend/routes/teacher.js#18-21) | String | e.g., "CSE 2024-2028". |
+| | `createdBy` | ObjectId | Reference to Teacher who created it. |
+| | `students` | Array | List of Student ObjectIds. |
+| **Request** (Planned) | `_id` | ObjectId | Unique Identifier. |
+| | `category` | String | e.g., "Grievance", "Correction". |
+| | `status` | String | Enum: 'Pending', 'Resolved', 'Rejected'. |
+
+---
+
+## 5. COMPONENT DESIGN
+
+### 5.1 Auth Components
+**Login Process**:
+1.  Receive `email` and `password`.
+2.  Find User by `email`.
+3.  Compare `password` hash using `bcrypt.compare()`.
+4.  If match, sign a JWT with `userId` and `role`.
+5.  Return JWT to client.
+
+### 5.2 Feature 1 – Exam Controller PDF Upload
+**Process**:
+1.  **Endpoint**: `POST /api/result/upload` (Middleware: `multer`, `auth('exam_controller')`).
+2.  **Logic**:
+    -   Call `pdf-parse` on uploaded buffer.
+    -   Extract Metadata (Semester, Exam Name) using regex.
+    -   Loop through text to find Student Blocks (RegNo + Grades).
+    -   For each student, calculate SGPA using Credit Map (JSON).
+    -   Construct [Result](file:///d:/Student%20Management%20System/backend/controllers/academic.js#7-28) objects.
+    -   Perform `Result.bulkWrite()` with upsert logic (match by `registerId` + `title`).
+3.  **Response**: Return count of processed records and generated Excel report buffer.
+
+### 5.3 Feature 2 – Teacher Student Registration (Excel)
+**Process**:
+1.  **Endpoint**: `POST /api/batch/:id/upload` (Middleware: `multer`, `auth('teacher')`).
+2.  **Logic**:
+    -   Read Excel file via `xlsx`.
+    -   Validate headers (`Admission No`, `Name`, `Registerid`).
+    -   Iterate rows:
+        -   Check if User exists (by `admissionNo`).
+        -   If not, create new User (`password` = hash(`Registerid`)).
+        -   Add User `_id` to Batch's `students` array.
+3.  **Response**: Return success count and list of any row errors.
+
+### 5.4 Feature 3 – Request Management (Planned)
+**Design**:
+-   **Create Request**:
+    -   Inputs: `category`, `message`, `targetAuthority`.
+    -   Actions: Create `Request` doc, set status 'Pending', timestamp `createdAt`.
+-   **View/Update (Authority)**:
+    -   Query `Request` collection where `targetAuthority` matches logged-in user.
+    -   Action: Update `status`, append to `responseMessage` field.
+
+---
+
+## 6. HUMAN INTERFACE DESIGN
+
+### 6.1 Overview of User Interface
+-   **Login Screen**: Clean, centered card with Email/Password fields.
+-   **Exam Controller Dashboard**:
+    -   Primary Action: "Upload Result PDF".
+    -   Feedback: Progress bar during processing, Success toast notification.
+-   **Teacher Dashboard**:
+    -   Grid view of "My Batches".
+    -   Inside Batch: "Add Student" button triggering file upload modal.
+-   **Student Dashboard**:
+    -   "Academic Overview": Summary cards (CGPA, Total Credits).
+    -   "Result History": Accordion list of semesters (S1, S2...).
+    -   "Request Box" (Planned): Form to submit grievances.
+
+### 6.2 Screen Objects and Actions
+-   **Inputs**: File Dropzone (PDF/Excel), Text Fields (Descriptions), Dropdowns (Exam Type).
+-   **Tables**: Datagrid for Student Lists and Result Views with sorting/filtering.
+-   **Navigation**: Sidebar for role-specific links (e.g., "Users" for Admin, "Results" for Student).
+
+---
+
+## 7. REQUIREMENTS MATRIX
+
+| Requirement ID (SRS) | Design Component (SDD) | Implementation Module |
+| :--- | :--- | :--- |
+| **FR-A1, A2, A3** (Auth) | Auth Service, User Model | `controllers/auth.js`, [models/User.js](file:///d:/Student%20Management%20System/backend/models/User.js) |
+| **FR-EC1, EC2** (PDF Upload) | Academic Service, Result Model | [controllers/academic.js](file:///d:/Student%20Management%20System/backend/controllers/academic.js), [utils/resultProcessor.js](file:///d:/Student%20Management%20System/backend/utils/resultProcessor.js) |
+| **FR-T1, T2** (Batch Mgmt) | Teacher Service, Batch Model | [controllers/teacher.js](file:///d:/Student%20Management%20System/backend/controllers/teacher.js), [models/Batch.js](file:///d:/Student%20Management%20System/backend/models/Batch.js) |
+| **FR-S1, S2** (Student View) | Academic Service (Get) | [controllers/academic.js](file:///d:/Student%20Management%20System/backend/controllers/academic.js) |
+| **FR-AD1, AD2** (Admin) | Admin Service | [controllers/admin.js](file:///d:/Student%20Management%20System/backend/controllers/admin.js) |
+| **FR-RQ1** (Requests - Future) | Request Service | `models/Request.js` (Planned) |
+
+---
+
+## 8. APPENDICES
+
+### Appendix A – Diagrams
+*(Conceptual Descriptions)*
+1.  **Context Diagram**: Shows User (Browser) <-> Node.js Server <-> MongoDB Cluster.
+2.  **ER Diagram**:
+    -   `User` (1) ---- (N) [Result](file:///d:/Student%20Management%20System/backend/controllers/academic.js#7-28)
+    -   `Teacher` (1) ---- (N) [Batch](file:///d:/Student%20Management%20System/backend/controllers/teacher.js#74-90)
+    -   [Batch](file:///d:/Student%20Management%20System/backend/controllers/teacher.js#74-90) (1) ---- (N) [Student](file:///d:/Student%20Management%20System/backend/controllers/teacher.js#34-51)
+
+### Appendix B – Security Notes
+-   **Password**: Bcrypt with 10 salt rounds.
+-   **API**: All endpoints verifying `Authorization: Bearer <token>`.
+-   **Validation**: Inputs sanitized to prevent NoSQL injection.
+
+### Appendix C – TBD / Future List
+-   **Module**: Internal Marks Excel Upload (Design finalized, implementation pending).
+-   **Module**: Course Registration (Students selecting electives).
+-   **Module**: Attendance Tracking (Daily/Hourly).

@@ -132,116 +132,68 @@ const uploadResultPDF = async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-        let { batchId, batchIds, examType, semester } = req.body; // Added examType, semester
+        const { examType, semester } = req.body;
 
-        // Handle batchIds (JSON string or array)
-        let targetBatchIds = [];
-        if (batchIds) {
-            try {
-                targetBatchIds = typeof batchIds === 'string' ? JSON.parse(batchIds) : batchIds;
-            } catch (e) {
-                targetBatchIds = [];
-            }
-        } else if (batchId) {
-            targetBatchIds = [batchId];
-        }
-
-        // 1. Parse PDF using new logic
+        // 1. Parse PDF
         const { rawStudents, metadata } = await processedData(req.file.buffer);
         console.log(`Parsed ${rawStudents.length} students from PDF.`);
 
-        // 2. Generate Excel Buffer (Advanced)
-        // Pass the full object including metadata
+        // 2. Generate Excel
         const excelBuffer = await generateExcel({ rawStudents, metadata });
 
-        // 3. Save to Database (Bulk)
+        // 3. Save ALL students to DB, keyed ONLY on registerId ─ no batch/account required
         const bulkOperations = [];
 
         for (const studentData of rawStudents) {
-            // Find student by Register ID
-            const student = await User.findOne({ registerId: studentData.registerId });
+            // Try to find an existing User account by registerId (optional link, never a blocker)
+            const student = await User.findOne({
+                registerId: { $regex: new RegExp(`^\\s*${studentData.registerId.trim()}\\s*$`, 'i') }
+            });
 
-            // Prepare Result Document
             const resultPayload = {
-                registerId: studentData.registerId,
-                type: examType || 'university', // Use provided examType or default
-                title: `${semester || metadata.semester} Result`, // Use provided semester or detected
+                registerId: studentData.registerId.trim(),
+                type: examType || 'university',
+                title: metadata.examTitle || `${semester || metadata.semester} Result`,
                 subjects: Object.entries(studentData.grades).map(([code, grade]) => ({
                     subCode: code,
                     name: code,
-                    grade: grade
+                    grade
                 })),
                 sgpa: studentData.sgpa,
                 totalCredits: studentData.totalCredits,
-                published: false, // Default to Draft mode
+                published: false,
                 date: new Date()
             };
 
-            let finalBatchId = null;
-
-            // Logic to determine Batch ID
-            if (student && student.batch) {
-                // If student has a batch, use it.
-                finalBatchId = student.batch;
+            // Link student account + batch if they already exist (bonus, not required)
+            if (student) {
                 resultPayload.student = student._id;
-            } else if (student) {
-                // Student exists but has no batch in their profile.
-                // Try to find them in the selected batches (Reverse Lookup)
-                const foundBatch = await Batch.findOne({
-                    _id: { $in: targetBatchIds },
-                    students: student._id
-                });
+                if (student.batch) resultPayload.batch = student.batch;
+            }
 
-                if (foundBatch) {
-                    finalBatchId = foundBatch._id;
-                    resultPayload.student = student._id;
-                    // Self-heal: Update student profile
-                    await User.findByIdAndUpdate(student._id, { batch: foundBatch._id });
-                } else if (targetBatchIds.length === 1) {
-                    // If only one batch was selected, assume they belong to it (Legacy fallback)
-                    finalBatchId = targetBatchIds[0];
-                    resultPayload.student = student._id;
-                    // We could also update the student here? Yes, safer.
-                    await User.findByIdAndUpdate(student._id, { batch: finalBatchId });
+            // Always upsert — keyed on registerId + title + type
+            bulkOperations.push({
+                updateOne: {
+                    filter: {
+                        registerId: resultPayload.registerId,
+                        type: resultPayload.type,
+                        title: resultPayload.title
+                    },
+                    update: { $set: resultPayload },
+                    upsert: true
                 }
-            } else {
-                // Student not found in DB at all.
-                // We can't link them.Result will be orphaned.
-            }
+            });
+        }
 
-            if (finalBatchId) {
-                resultPayload.batch = finalBatchId;
-
-                // Upsert: Join on registerId + type + title
-                bulkOperations.push({
-                    updateOne: {
-                        filter: {
-                            registerId: studentData.registerId,
-                            type: resultPayload.type,
-                            title: resultPayload.title
-                        },
-                        update: { $set: resultPayload },
-                        upsert: true
-                    }
-                });
-            }
-        } // End of For Loop
-
-        console.log(`Prepared ${bulkOperations.length} bulk operations.`);
-
-        // Execute Bulk Write
         if (bulkOperations.length > 0) {
             const bulkResult = await Result.bulkWrite(bulkOperations);
-            console.log(`Bulk Write Result: Matched ${bulkResult.matchedCount}, Modified ${bulkResult.modifiedCount}, Upserted ${bulkResult.upsertedCount}`);
-        } else {
-            console.log("No bulk operations to execute (possibly due to missing student/batch mapping).");
+            console.log(`Saved ${bulkOperations.length} results. Upserted: ${bulkResult.upsertedCount}, Modified: ${bulkResult.modifiedCount}`);
         }
 
         // 4. Return Excel file
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=university_results.xlsx');
         res.send(excelBuffer);
-
 
     } catch (error) {
         console.error(error);
@@ -309,6 +261,50 @@ exports.downloadBatchResult = async (req, res) => {
     }
 };
 
+// Download Excel for all students across all batches for a given exam title (for EC)
+exports.downloadResultExcelGlobal = async (req, res) => {
+    try {
+        const { title, type } = req.query;
+
+        const results = await Result.find({
+            title: title,
+            type: type || 'university'
+        }).populate('student', 'name registerId').sort({ registerId: 1 });
+
+        if (results.length === 0) {
+            return res.status(404).send('No results found for this exam.');
+        }
+
+        const rawStudents = results.map(r => {
+            const grades = {};
+            r.subjects.forEach(sub => { grades[sub.subCode] = sub.grade; });
+            return {
+                registerId: r.registerId || r.student?.registerId,
+                name: r.student?.name,
+                sgpa: r.sgpa,
+                totalCredits: r.totalCredits,
+                grades
+            };
+        });
+
+        const metadata = {
+            college: "Musaliar College of Engineering & Technology",
+            semester: title,
+            batch: null
+        };
+
+        const excelBuffer = await generateExcel({ rawStudents, metadata });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${title}.xlsx"`);
+        res.send(excelBuffer);
+
+    } catch (err) {
+        console.error("Error downloading global excel:", err);
+        res.status(500).send('Server Error');
+    }
+};
+
 exports.getBatchResultOverview = async (req, res) => {
     try {
         const { batchId } = req.params;
@@ -344,22 +340,82 @@ exports.getBatchResultOverview = async (req, res) => {
     }
 };
 
+// Get overview of ALL published results across all batches (for Exam Controller)
+exports.getAllResultOverview = async (req, res) => {
+    try {
+        const overview = await Result.aggregate([
+            { $match: { published: true } },
+            {
+                $group: {
+                    _id: { title: "$title", type: "$type" },
+                    totalStudents: { $sum: 1 },
+                    lastUploaded: { $max: "$date" },
+                    averageSGPA: { $avg: "$sgpa" }
+                }
+            },
+            { $sort: { lastUploaded: -1 } }
+        ]);
+
+        res.json(overview.map(item => ({
+            title: item._id.title,
+            type: item._id.type,
+            totalStudents: item.totalStudents,
+            published: true,
+            lastUploaded: item.lastUploaded,
+            averageSGPA: (item.averageSGPA || 0).toFixed(2)
+        })));
+
+    } catch (err) {
+        console.error("Error fetching all results overview:", err);
+        res.status(500).send('Server Error');
+    }
+};
+
+// Get overview of ALL DRAFT (unpublished) results across all batches (for Exam Controller Recent Uploads)
+exports.getDraftResultOverview = async (req, res) => {
+    try {
+        const overview = await Result.aggregate([
+            { $match: { published: false } },
+            {
+                $group: {
+                    _id: { title: "$title", type: "$type" },
+                    totalStudents: { $sum: 1 },
+                    lastUploaded: { $max: "$date" },
+                    averageSGPA: { $avg: "$sgpa" }
+                }
+            },
+            { $sort: { lastUploaded: -1 } }
+        ]);
+
+        res.json(overview.map(item => ({
+            title: item._id.title,
+            type: item._id.type,
+            totalStudents: item.totalStudents,
+            published: false,
+            lastUploaded: item.lastUploaded,
+            averageSGPA: (item.averageSGPA || 0).toFixed(2)
+        })));
+
+    } catch (err) {
+        console.error("Error fetching draft results overview:", err);
+        res.status(500).send('Server Error');
+    }
+};
+
 exports.publishResult = async (req, res) => {
     try {
         const { batchId, title, type } = req.body;
 
-        if (!batchId || !title) {
-            return res.status(400).json({ message: "Batch ID and Title are required" });
+        if (!title) {
+            return res.status(400).json({ message: "Title is required" });
         }
 
-        const result = await Result.updateMany(
-            {
-                batch: batchId,
-                title: title,
-                type: type || 'university'
-            },
-            { $set: { published: true } }
-        );
+        // If batchId provided, publish only for that batch (teacher action)
+        // If no batchId, publish across all batches (exam controller action)
+        const filter = { title, type: type || 'university' };
+        if (batchId) filter.batch = batchId;
+
+        const result = await Result.updateMany(filter, { $set: { published: true } });
 
         res.json({ message: "Result published successfully", modified: result.modifiedCount });
 
@@ -384,7 +440,7 @@ exports.getBatchResultDetails = async (req, res) => {
             type: type || 'university'
         })
             .populate('student', 'name admissionNo registerId')
-            .sort({ 'student.registerId': 1 }); // Sort by Register ID associated with student if possible
+            .sort({ registerId: 1 });
 
         res.json(results);
 
@@ -394,14 +450,40 @@ exports.getBatchResultDetails = async (req, res) => {
     }
 };
 
+// Get all student details for an exam across ALL batches (for EC dashboard modal)
+exports.getAllResultDetails = async (req, res) => {
+    try {
+        const { title, type } = req.query;
+
+        if (!title) {
+            return res.status(400).json({ message: "Title is required" });
+        }
+
+        const results = await Result.find({
+            title: title,
+            type: type || 'university',
+            published: true
+        })
+            .populate('student', 'name admissionNo registerId')
+            .populate('batch', 'name branch')
+            .sort({ registerId: 1 });
+
+        res.json(results);
+
+    } catch (err) {
+        console.error("Error fetching all result details:", err);
+        res.status(500).send('Server Error');
+    }
+};
+
 exports.deleteResult = async (req, res) => {
     try {
-        const { batchId, title, type } = req.body;
+        const { title, type } = req.body;
 
-        if (!batchId || !title) return res.status(400).json({ message: "Missing parameters" });
+        if (!title) return res.status(400).json({ message: "Missing title parameter" });
 
+        // Delete across all batches by title+type
         const result = await Result.deleteMany({
-            batch: batchId,
             title: title,
             type: type || 'university'
         });
@@ -488,17 +570,17 @@ exports.getCollegeResultAnalysis = async (req, res) => {
 
         if (!title) return res.status(400).json({ message: "Title is required" });
 
-        const query = {
-            title: title,
+        // Query ALL results for this exam — no batch filter, truly college-wide
+        const results = await Result.find({
+            title,
             type: type || 'university'
-        };
-
-        const results = await Result.find(query).populate('student', 'name admissionNo registerId');
+        }).populate('student', 'name admissionNo registerId');
 
         if (!results.length) return res.json(null);
 
-        // 1. Top 10 Performers (Across College)
+        // 1. Top 10 Performers (Across Entire College)
         const topPerformers = [...results]
+            .filter(r => r.sgpa > 0)
             .sort((a, b) => b.sgpa - a.sgpa)
             .slice(0, 10)
             .map(r => ({
@@ -506,21 +588,21 @@ exports.getCollegeResultAnalysis = async (req, res) => {
                 sgpa: r.sgpa
             }));
 
-        // 2. Pass/Fail Analysis
-        let passed = 0;
-        let failed = 0;
-        const failedGrades = ['F', 'FE', 'I', 'Absent'];
-
-        // 3. Subject-wise Analysis
+        // 2. Pass/Fail + Subject-wise Analysis
+        const failedGrades = ['F', 'FE', 'I', 'ABSENT', 'Absent'];
+        let passed = 0, failed = 0;
         const subjectStats = {};
+
+        // 3. Per-department breakdown (inferred from registerId: PKD24CE001 → CE)
+        const deptStats = {};
 
         results.forEach(r => {
             let isStudentFailed = false;
+
             r.subjects.forEach(sub => {
                 if (!subjectStats[sub.subCode]) {
                     subjectStats[sub.subCode] = { code: sub.subCode, pass: 0, fail: 0 };
                 }
-
                 if (failedGrades.includes(sub.grade)) {
                     subjectStats[sub.subCode].fail++;
                     isStudentFailed = true;
@@ -531,15 +613,25 @@ exports.getCollegeResultAnalysis = async (req, res) => {
 
             if (isStudentFailed) failed++;
             else passed++;
+
+            // Extract dept code from registerId (e.g. PKD24CE001 → CE)
+            const regId = r.registerId || '';
+            const deptCode = regId.length >= 7 ? regId.substring(5, 7) : 'XX';
+            if (!deptStats[deptCode]) deptStats[deptCode] = { dept: deptCode, pass: 0, fail: 0, total: 0 };
+            deptStats[deptCode].total++;
+            if (isStudentFailed) deptStats[deptCode].fail++;
+            else deptStats[deptCode].pass++;
         });
 
         res.json({
+            totalStudents: results.length,
             topPerformers,
             passFail: [
                 { name: 'Passed', value: passed },
                 { name: 'Failed', value: failed }
             ],
-            subjectAnalysis: Object.values(subjectStats)
+            subjectAnalysis: Object.values(subjectStats),
+            deptBreakdown: Object.values(deptStats).sort((a, b) => a.dept.localeCompare(b.dept))
         });
 
     } catch (err) {
@@ -548,57 +640,75 @@ exports.getCollegeResultAnalysis = async (req, res) => {
     }
 };
 
+
 exports.getDepartmentResultAnalysis = async (req, res) => {
     try {
         const { title, type } = req.query;
-        // 1. Get Teacher's Department
         const user = await User.findById(req.user.userId);
-        if (!user || user.role !== 'teacher' || !user.department) {
-            return res.status(400).json({ message: "User is not a teacher or has no department assigned." });
+
+        let department = null;
+        let batchIds = [];
+
+        if (user && user.department) {
+            department = user.department.trim(); // e.g. "IT", "CS", "CE"
         }
 
-        const department = user.department;
-        console.log(`[DEBUG] Teacher ID: ${req.user.userId}, Department: "${department}"`);
+        if (department) {
+            const departmentBatches = await Batch.find({ branch: new RegExp(`^${department}$`, 'i') }).select('_id');
+            batchIds = departmentBatches.map(b => b._id);
+            console.log(`[Dept Analysis] Dept: ${department}, Batches found: ${batchIds.length}`);
+        }
 
-        // 2. Find all batches for this department
-        const Batch = require('../models/Batch'); // Ensure Batch model is imported
-        const departmentBatches = await Batch.find({ branch: department }).select('_id name branch');
-        console.log(`[DEBUG] Found ${departmentBatches.length} batches for department "${department}":`, departmentBatches.map(b => `${b.name} (${b.branch})`));
+        if (!department) {
+            return res.status(400).json({ message: 'No department assigned to this user.' });
+        }
 
-        const batchIds = departmentBatches.map(b => b._id);
+        // Dual query strategy:
+        // 1. Results linked to the department's batches (for students already assigned to a batch)
+        // 2. Results where registerId contains the dept code (for universally-stored results)
+        //    RegId format: PKD24IT001 → dept code at positions 5-7 (2 chars)
 
-        if (!batchIds.length) return res.json(null);
+        const baseQuery = { title, type: type || 'university' };
 
-        // 3. Aggregate Results
-        const query = {
-            batch: { $in: batchIds },
-            title: title,
-            type: type || 'university'
-        };
+        const [batchResults, regIdResults] = await Promise.all([
+            // Strategy 1: By batch
+            batchIds.length
+                ? Result.find({ ...baseQuery, batch: { $in: batchIds } }).populate('student', 'name registerId').populate('batch', 'name')
+                : Promise.resolve([]),
 
-        const results = await Result.find(query)
-            .populate('student', 'name admissionNo registerId batch')
-            .populate('batch', 'name'); // Populate batch to show which batch the student belongs to
+            // Strategy 2: By registerId pattern (dept code, case-insensitive, at chars 5-6 of regId)
+            Result.find({
+                ...baseQuery,
+                registerId: { $regex: new RegExp(`^PKD\\d{2}${department}\\d+`, 'i') }
+            }).populate('student', 'name registerId').populate('batch', 'name')
+        ]);
+
+        // Merge and deduplicate by _id
+        const seen = new Set();
+        const results = [...batchResults, ...regIdResults].filter(r => {
+            const id = r._id.toString();
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+        });
+
+        console.log(`[Dept Analysis] Total results after merge: ${results.length} (batch: ${batchResults.length}, regId: ${regIdResults.length})`);
 
         if (!results.length) return res.json(null);
 
-        // --- Analysis Logic (Same as College/Batch) ---
-
         // 1. Top 10 Performers
         const topPerformers = [...results]
+            .filter(r => r.sgpa > 0)
             .sort((a, b) => b.sgpa - a.sgpa)
             .slice(0, 10)
             .map(r => ({
-                name: `${r.student?.name || r.registerId} (${r.batch?.name || 'Unknown'})`,
+                name: r.student?.name || r.registerId,
                 sgpa: r.sgpa
             }));
 
-        // 2. Pass/Fail Analysis
-        let passed = 0;
-        let failed = 0;
-        const failedGrades = ['F', 'FE', 'I', 'Absent'];
-
-        // 3. Subject-wise Analysis
+        // 2. Pass/Fail + Subject-wise Analysis
+        const failedGrades = ['F', 'FE', 'I', 'ABSENT', 'Absent'];
+        let passed = 0, failed = 0;
         const subjectStats = {};
 
         results.forEach(r => {
@@ -607,7 +717,6 @@ exports.getDepartmentResultAnalysis = async (req, res) => {
                 if (!subjectStats[sub.subCode]) {
                     subjectStats[sub.subCode] = { code: sub.subCode, pass: 0, fail: 0 };
                 }
-
                 if (failedGrades.includes(sub.grade)) {
                     subjectStats[sub.subCode].fail++;
                     isStudentFailed = true;
@@ -615,13 +724,13 @@ exports.getDepartmentResultAnalysis = async (req, res) => {
                     subjectStats[sub.subCode].pass++;
                 }
             });
-
             if (isStudentFailed) failed++;
             else passed++;
         });
 
         res.json({
             department,
+            totalStudents: results.length,
             topPerformers,
             passFail: [
                 { name: 'Passed', value: passed },
@@ -631,7 +740,7 @@ exports.getDepartmentResultAnalysis = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Error generating department analysis:", err);
-        res.status(500).send("Server Error");
+        console.error('Error generating department analysis:', err);
+        res.status(500).send('Server Error');
     }
 };

@@ -1,97 +1,67 @@
 import { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-import { Upload, FileText, Trash2, Eye, LogOut, Shield, ChevronRight, CheckCircle, AlertCircle, X, Search } from 'lucide-react';
+import { Upload, FileText, Trash2, Eye, LogOut, Shield, ChevronRight, CheckCircle, AlertCircle, X, BarChart2, Globe, Download } from 'lucide-react';
+import ResultAnalysis from '../teacher/ResultAnalysis';
 
 const ExamControllerDashboard = () => {
     const { logout } = useAuth();
-    const [batches, setBatches] = useState([]);
-    const [selectedBatch, setSelectedBatch] = useState('');
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
+
+
+    // Draft uploads (recent uploads awaiting publish)
+    const [drafts, setDrafts] = useState([]);
+    // All published results
     const [overview, setOverview] = useState([]);
 
-    const [semester, setSemester] = useState('S1');
-    const [uploadBatches, setUploadBatches] = useState([]); // Restored
-
-    const toggleBatchSelection = (batchId) => {
-        setUploadBatches(prev =>
-            prev.includes(batchId)
-                ? prev.filter(id => id !== batchId)
-                : [...prev, batchId]
-        );
-    };
-
-    // Details Modal State
+    // View Details Modal
     const [viewingResult, setViewingResult] = useState(null);
     const [resultDetails, setResultDetails] = useState([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
+    // Analysis
+    const [viewingAnalysis, setViewingAnalysis] = useState(null);
+
     useEffect(() => {
-        fetchBatches();
+        fetchDrafts();
+        fetchOverview();
     }, []);
 
-    useEffect(() => {
-        if (selectedBatch) {
-            fetchOverview();
-        } else {
-            setOverview([]);
-        }
-    }, [selectedBatch]);
-
-    const fetchBatches = async () => {
+    const fetchDrafts = async () => {
         try {
-            // We can reuse the teacher batch endpoint if it returns all batches for admin/EC
-            // Or use a specific endpoint. Assuming getResultsByBatch might return batches if no batchId provided?
-            // Actually, we need a way to list ALL batches in the college.
-            // Let's try the admin endpoint or a new one. 
-            // For now, let's try '/teacher/batch' but that might be restricted to "my batches".
-            // Implementation Plan mentioned reuse or new.
-            // Let's assume for now we need to fetch all batches. 
-            // I'll use the public batch list or create a quick specialized fetch if needed.
-            // Actually, let's use the one from TeacherDashboard but we need to ensure backend allows it.
-            // Wait, '/teacher/batch' returns batches for the logged in teacher. 
-            // Exam Controller needs ALL batches.
-            // I'll assume for moment I can get them via a new call or I need to add one.
-            // Let's try to hit '/admin/batch' if it exists or generic '/academic/batch'.
-            // Checking routes... I didn't verify a "get all batches" route for EC.
-            // I will use '/teacher/batch' and hope looking at the backend code that it returns all if generic, 
-            // BUT backend teacher controller usually filters by `req.user.userId`.
-            // I might need to fix this.
-
-            // Temporary: allow EC to see all batches via the same endpoint or a new one.
-            // I will optimistically check if I can just toggle a "fetch all" mode.
-            // For this step I will write the code assuming there is a way, 
-            // and if it fails I will fix the backend in the next step.
-            const res = await axios.get('/teacher/batch'); // Attempting reuse
-            setBatches(res.data);
+            const res = await axios.get('/academic/result/draft-overview');
+            setDrafts(res.data);
         } catch (error) {
-            console.error("Error fetching batches:", error);
+            console.error("Error fetching drafts:", error);
         }
     };
 
     const fetchOverview = async () => {
         try {
-            const res = await axios.get(`/academic/result/overview/${selectedBatch}`);
+            const res = await axios.get('/academic/result/overview');
             setOverview(res.data);
         } catch (error) {
             console.error("Error fetching overview:", error);
         }
     };
 
+    const refreshAll = () => {
+        fetchDrafts();
+        fetchOverview();
+    };
+
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (!file || uploadBatches.length === 0) {
-            setMessage('ERROR: Please select at least one batch and upload a file.');
+        if (!file) {
+            setMessage('ERROR: Please select a PDF file to upload.');
             return;
         }
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('examType', 'university'); // EC only uploads University results
-        formData.append('batchIds', JSON.stringify(uploadBatches)); // Send multiple batches
-        formData.append('semester', semester);
+        formData.append('examType', 'university');
 
         setMessage('Processing PDF... This may take a moment...');
         setLoading(true);
@@ -99,20 +69,19 @@ const ExamControllerDashboard = () => {
         try {
             const res = await axios.post('/academic/result/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
-                responseType: 'blob' // Expecting Excel back
+                responseType: 'blob'
             });
 
-            // Trigger download
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `University_${semester}_Results.xlsx`);
+            link.setAttribute('download', `University_Results.xlsx`);
             document.body.appendChild(link);
             link.click();
 
-            setMessage('SUCCESS: Results uploaded as DRAFT. Review below.');
+            setMessage('SUCCESS: PDF processed. Review in Recent Uploads below, then Publish when ready.');
             setFile(null);
-            fetchOverview();
+            refreshAll();
         } catch (error) {
             console.error(error);
             setMessage('ERROR: Failed to process PDF. Ensure it is a valid University Result file.');
@@ -120,26 +89,49 @@ const ExamControllerDashboard = () => {
         setLoading(false);
     };
 
-    const handleDelete = async (result) => {
-        if (!window.confirm(`DANGER: Delete ${result.title}? This cannot be undone.`)) return;
+    const handlePublish = async (item) => {
+        if (!window.confirm(`Publish "${item.title}" to all teachers and students? This cannot be undone.`)) return;
         try {
-            await axios.post('/academic/result/delete', {
-                batchId: selectedBatch,
-                title: result.title,
-                type: result.type
-            });
-            fetchOverview();
+            await axios.post('/academic/result/publish', { title: item.title, type: item.type });
+            refreshAll();
+        } catch (error) {
+            alert("Failed to publish result.");
+        }
+    };
+
+    const handleDelete = async (item) => {
+        if (!window.confirm(`DANGER: Delete "${item.title}"? This cannot be undone.`)) return;
+        try {
+            await axios.post('/academic/result/delete', { title: item.title, type: item.type });
+            refreshAll();
         } catch (error) {
             alert("Failed to delete result.");
         }
     };
 
-    const handleViewDetails = async (result) => {
-        setViewingResult(result);
+    const handleDownload = async (item) => {
+        try {
+            const response = await axios.get('/academic/result/download/all', {
+                params: { title: item.title, type: item.type },
+                responseType: 'blob',
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${item.title}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+        } catch (error) {
+            alert("Failed to download Excel.");
+        }
+    };
+
+    const handleViewDetails = async (item) => {
+        setViewingResult(item);
         setLoadingDetails(true);
         try {
-            const res = await axios.get(`/academic/result/details/${selectedBatch}`, {
-                params: { title: result.title, type: result.type }
+            const res = await axios.get('/academic/result/details/all', {
+                params: { title: item.title, type: item.type }
             });
             setResultDetails(res.data);
         } catch (error) {
@@ -147,6 +139,65 @@ const ExamControllerDashboard = () => {
         }
         setLoadingDetails(false);
     };
+
+    const handleCollegeAnalysis = (item) => {
+        setViewingAnalysis({ ...item, mode: 'college' });
+    };
+
+    const handleDeptAnalysis = (item) => {
+        setViewingAnalysis({ ...item, mode: 'department' });
+    };
+
+    // Reusable result card action buttons
+    const ResultActions = ({ item, isDraft }) => (
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+                onClick={() => handleViewDetails(item)}
+                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="View Student Details"
+            >
+                <Eye className="h-4 w-4" />
+            </button>
+            <button
+                onClick={() => handleDownload(item)}
+                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="Download Excel"
+            >
+                <Download className="h-4 w-4" />
+            </button>
+            <button
+                onClick={() => handleDeptAnalysis(item)}
+                className="p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                title="Department Analysis"
+            >
+                <BarChart2 className="h-4 w-4" />
+            </button>
+            <button
+                onClick={() => handleCollegeAnalysis(item)}
+                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="College Analysis"
+            >
+                <Globe className="h-4 w-4" />
+            </button>
+            {isDraft && (
+                <button
+                    onClick={() => handlePublish(item)}
+                    className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm shadow-green-200"
+                    title="Publish to teachers & students"
+                >
+                    <CheckCircle className="h-3 w-3" />
+                    Publish
+                </button>
+            )}
+            <button
+                onClick={() => handleDelete(item)}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete"
+            >
+                <Trash2 className="h-4 w-4" />
+            </button>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex flex-col">
@@ -180,78 +231,37 @@ const ExamControllerDashboard = () => {
                                 <Upload className="mr-3 h-6 w-6" />
                                 Upload University Results
                             </h2>
-                            <p className="text-blue-100 text-sm mt-1">Upload PDF results to generate drafts for teachers to approve.</p>
+                            <p className="text-blue-100 text-sm mt-1">Upload the official PDF result sheet. After upload, review and publish to release to teachers and students.</p>
                         </div>
                     </div>
 
                     <div className="p-8">
-                        <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Select Target Batches (Multi)</label>
-                                    <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-gray-50">
-                                        {batches.map(b => (
-                                            <div key={b._id} className="flex items-center space-x-3 mb-2 last:mb-0">
-                                                <input
-                                                    type="checkbox"
-                                                    id={`batch-${b._id}`}
-                                                    checked={uploadBatches.includes(b._id)}
-                                                    onChange={() => toggleBatchSelection(b._id)}
-                                                    className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
-                                                />
-                                                <label htmlFor={`batch-${b._id}`} className="text-sm font-medium text-gray-700 cursor-pointer select-none flex-1">
-                                                    {b.name} <span className="text-gray-400">({b.branch})</span>
-                                                </label>
-                                            </div>
-                                        ))}
+                        <form onSubmit={handleUpload} className="space-y-6">
+                            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:bg-blue-50 hover:border-blue-200 transition-all cursor-pointer relative group">
+                                <input
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={(e) => setFile(e.target.files[0])}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div className="flex flex-col items-center">
+                                    <div className="h-14 w-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <FileText className="h-7 w-7" />
                                     </div>
-                                    <p className="text-xs text-blue-600 font-bold mt-2">{uploadBatches.length} batches selected</p>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Semester</label>
-                                    <div className="flex space-x-2 overflow-x-auto pb-2">
-                                        {['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'].map(sem => (
-                                            <button
-                                                key={sem}
-                                                type="button"
-                                                onClick={() => setSemester(sem)}
-                                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${semester === sem ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                                            >
-                                                {sem}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <span className="font-bold text-gray-700 text-lg">
+                                        {file ? file.name : 'Click to Upload PDF'}
+                                    </span>
+                                    <span className="text-sm text-gray-400 mt-2">Official University Result PDF — semester detected automatically</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-6">
-                                <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:bg-blue-50 hover:border-blue-200 transition-all cursor-pointer relative group">
-                                    <input
-                                        type="file"
-                                        accept=".pdf"
-                                        onChange={(e) => setFile(e.target.files[0])}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                    <div className="flex flex-col items-center">
-                                        <div className="h-14 w-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                            <FileText className="h-7 w-7" />
-                                        </div>
-                                        <span className="font-bold text-gray-700 text-lg">
-                                            {file ? file.name : 'Click to Upload PDF'}
-                                        </span>
-                                        <span className="text-sm text-gray-400 mt-2">Supports University Result PDFs</span>
-                                    </div>
-                                </div>
-
-                                <button
-                                    disabled={!file || uploadBatches.length === 0 || loading}
-                                    className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-xl shadow-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                                >
-                                    {loading ? 'Processing...' : 'Process & Upload Result'}
-                                    {!loading && <ChevronRight className="ml-2 h-5 w-5" />}
-                                </button>
-                            </div>
+                            <button
+                                disabled={!file || loading}
+                                className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-xl shadow-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            >
+                                {loading ? 'Processing...' : 'Process & Save as Draft'}
+                                {!loading && <ChevronRight className="ml-2 h-5 w-5" />}
+                            </button>
                         </form>
 
                         {message && (
@@ -263,72 +273,80 @@ const ExamControllerDashboard = () => {
                     </div>
                 </div>
 
-                {/* History Section */}
+                {/* Recent Uploads (Drafts) Section */}
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center justify-between">
                         <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                            Result History
-                            <span className="ml-3 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full">{overview.length}</span>
+                            <span className="h-2.5 w-2.5 rounded-full bg-amber-400 mr-3 animate-pulse"></span>
+                            Recent Uploads — Awaiting Publish
+                            <span className="ml-3 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full font-bold">{drafts.length}</span>
                         </h3>
-                        <div className="w-64">
-                            <select
-                                value={selectedBatch}
-                                onChange={(e) => setSelectedBatch(e.target.value)}
-                                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer"
-                            >
-                                <option value="">Select Batch to View History...</option>
-                                {batches.map(b => (
-                                    <option key={b._id} value={b._id}>{b.name} ({b.branch})</option>
-                                ))}
-                            </select>
-                        </div>
                     </div>
 
-                    {selectedBatch && (
-                        <div className="grid gap-4">
-                            {overview.map((item, idx) => (
-                                <div key={idx} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center transition-all hover:shadow-md">
-                                    <div>
-                                        <div className="flex items-center gap-3">
-                                            <h4 className="font-bold text-lg text-gray-900">{item.title}</h4>
-                                            <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md tracking-wide ${item.published ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                                                {item.published ? 'Published' : 'Draft (Waiting Approval)'}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Uploaded {new Date(item.lastUploaded).toLocaleDateString()} • {item.totalStudents} Students
-                                        </p>
-                                    </div>
+                    <div className="grid gap-4">
+                        {drafts.map((item, idx) => (
+                            <div key={idx} className="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:shadow-md">
+                                <div>
                                     <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => handleViewDetails(item)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            title="View Details"
-                                        >
-                                            <Eye className="h-5 w-5" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(item)}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Delete Result"
-                                        >
-                                            <Trash2 className="h-5 w-5" />
-                                        </button>
+                                        <h4 className="font-bold text-lg text-gray-900">{item.title}</h4>
+                                        <span className="text-[10px] uppercase font-bold px-2 py-1 rounded-md tracking-wide bg-amber-100 text-amber-800">
+                                            Draft
+                                        </span>
                                     </div>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Uploaded {new Date(item.lastUploaded).toLocaleDateString()} • {item.totalStudents} Students • Avg SGPA: {item.averageSGPA}
+                                    </p>
                                 </div>
-                            ))}
-                            {overview.length === 0 && (
-                                <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
-                                    <FileText className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                                    No results uploaded for this batch yet.
+                                <ResultActions item={item} isDraft={true} />
+                            </div>
+                        ))}
+                        {drafts.length === 0 && (
+                            <div className="text-center py-10 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
+                                <FileText className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                                No pending uploads. Upload a PDF above to get started.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Published Results Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                            <span className="h-2.5 w-2.5 rounded-full bg-green-500 mr-3"></span>
+                            Published Results
+                            <span className="ml-3 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-bold">{overview.length}</span>
+                        </h3>
+                    </div>
+
+                    <div className="grid gap-4">
+                        {overview.map((item, idx) => (
+                            <div key={idx} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:shadow-md">
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <h4 className="font-bold text-lg text-gray-900">{item.title}</h4>
+                                        <span className="text-[10px] uppercase font-bold px-2 py-1 rounded-md tracking-wide bg-green-100 text-green-800">
+                                            Published
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Published {new Date(item.lastUploaded).toLocaleDateString()} • {item.totalStudents} Students • Avg SGPA: {item.averageSGPA}
+                                    </p>
                                 </div>
-                            )}
-                        </div>
-                    )}
+                                <ResultActions item={item} isDraft={false} />
+                            </div>
+                        ))}
+                        {overview.length === 0 && (
+                            <div className="text-center py-10 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
+                                <FileText className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                                No published results yet.
+                            </div>
+                        )}
+                    </div>
                 </div>
             </main>
 
-            {/* Modal */}
+            {/* View Details Modal */}
             {viewingResult && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
@@ -337,9 +355,20 @@ const ExamControllerDashboard = () => {
                                 <h2 className="text-xl font-bold text-gray-900">{viewingResult.title}</h2>
                                 <p className="text-sm text-gray-500">{resultDetails.length} Records</p>
                             </div>
-                            <button onClick={() => setViewingResult(null)} className="p-2 hover:bg-gray-200 rounded-full">
-                                <X className="h-6 w-6 text-gray-500" />
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {!viewingResult.published && (
+                                    <button
+                                        onClick={() => { handlePublish(viewingResult); setViewingResult(null); }}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
+                                    >
+                                        <CheckCircle className="h-4 w-4" />
+                                        Publish
+                                    </button>
+                                )}
+                                <button onClick={() => setViewingResult(null)} className="p-2 hover:bg-gray-200 rounded-full">
+                                    <X className="h-6 w-6 text-gray-500" />
+                                </button>
+                            </div>
                         </div>
                         <div className="overflow-y-auto flex-1 p-6">
                             {loadingDetails ? (
@@ -350,6 +379,7 @@ const ExamControllerDashboard = () => {
                                         <tr>
                                             <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Reg No</th>
                                             <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Name</th>
+                                            <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase">Total Credits</th>
                                             <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase text-right">SGPA</th>
                                         </tr>
                                     </thead>
@@ -357,7 +387,8 @@ const ExamControllerDashboard = () => {
                                         {resultDetails.map((res, i) => (
                                             <tr key={i} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3 font-mono text-xs font-bold text-gray-600">{res.registerId}</td>
-                                                <td className="px-4 py-3 font-medium text-gray-900">{res.student?.name || 'Unknown'}</td>
+                                                <td className="px-4 py-3 font-medium text-gray-900">{res.student?.name || <span className="text-gray-400 italic">Unknown</span>}</td>
+                                                <td className="px-4 py-3 text-gray-500 text-sm">{res.totalCredits}</td>
                                                 <td className="px-4 py-3 text-right font-bold text-blue-600">{res.sgpa}</td>
                                             </tr>
                                         ))}
@@ -367,6 +398,17 @@ const ExamControllerDashboard = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Analysis Modal */}
+            {viewingAnalysis && (
+                <ResultAnalysis
+                    batchId={null}
+                    title={viewingAnalysis.title}
+                    type={viewingAnalysis.type}
+                    mode={viewingAnalysis.mode}
+                    onClose={() => setViewingAnalysis(null)}
+                />
             )}
         </div>
     );
