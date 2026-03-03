@@ -1,0 +1,263 @@
+# Software Requirements Specification
+## for Scalable Academic Management System (SAMS)
+
+**Version 1.2 (Detailed & Codebase Aligned)**
+
+**Prepared by Team 10**
+**Department of Computer Science and Engineering**
+**<College Name>, under APJ Abdul Kalam Technological University**
+**February 2026**
+
+---
+
+## Table of Contents
+1. [Introduction](#1-introduction)
+    1.1 [Purpose](#11-purpose)
+    1.2 [Document Conventions](#12-document-conventions)
+    1.3 [Intended Audience and Reading Suggestions](#13-intended-audience-and-reading-suggestions)
+    1.4 [Product Scope](#14-product-scope)
+    1.5 [References](#15-references)
+2. [Overall Description](#2-overall-description)
+    2.1 [Product Perspective](#21-product-perspective)
+    2.2 [Product Functions](#22-product-functions)
+    2.3 [User Classes and Characteristics](#23-user-classes-and-characteristics)
+    2.4 [Operating Environment](#24-operating-environment)
+    2.5 [Design and Implementation Constraints](#25-design-and-implementation-constraints)
+    2.6 [User Documentation](#26-user-documentation)
+    2.7 [Assumptions and Dependencies](#27-assumptions-and-dependencies)
+3. [External Interface Requirements](#3-external-interface-requirements)
+    3.1 [User Interfaces](#31-user-interfaces)
+    3.2 [Hardware Interfaces](#32-hardware-interfaces)
+    3.3 [Software Interfaces](#33-software-interfaces)
+    3.4 [Communications Interfaces](#34-communications-interfaces)
+4. [System Features](#4-system-features)
+    4.1 [Authentication and Authorization](#41-authentication-and-authorization)
+    4.2 [Exam Controller – Official Result Management](#42-exam-controller-official-result-management)
+    4.3 [Teacher – Batch and Student Management](#43-teacher-batch-and-student-management)
+    4.4 [Student Unified Grade Dashboard](#44-student-unified-grade-dashboard)
+    4.5 [Admin System Management](#45-admin-system-management)
+5. [Other Nonfunctional Requirements](#5-other-nonfunctional-requirements)
+    5.1 [Performance Requirements](#51-performance-requirements)
+    5.2 [Safety Requirements](#52-safety-requirements)
+    5.3 [Security Requirements](#53-security-requirements)
+    5.4 [Software Quality Attributes](#54-software-quality-attributes)
+    5.5 [Business Rules](#55-business-rules)
+6. [Other Requirements](#6-other-requirements)
+
+Appendix A: Glossary
+Appendix B: Analysis Models
+Appendix C: Future Scope
+
+---
+
+## 1. Introduction
+
+### 1.1 Purpose
+The purpose of this Software Requirements Specification (SRS) is to document the full set of requirements for the **Scalable Academic Management System (SAMS)**. This document guides the development, testing, and deployment of the system, ensuring alignment with the operational needs of the Department of Computer Science and Engineering. It details the functional and non-functional requirements for Version 1.2, focusing on role-based academic data management.
+
+### 1.2 Document Conventions
+-   **Typography**: Bold text is used for emphasis and module names. Monospaced font implies database fields or API endpoints.
+-   **Terminology**: "System" refers to SAMS. "User" refers to any authenticated entity (Student, Teacher, Admin, Exam Controller).
+-   **Priority**: Requirements are implicitly high priority unless marked otherwise.
+
+### 1.3 Intended Audience and Reading Suggestions
+This document is intended for:
+1.  **Project Developers**: To understand the backend API structure (`routes/*`) and data models (`models/*`).
+2.  **QA Testers**: To understand valid input formats for Excel/PDF uploads and expected error responses.
+3.  **Department Heads**: To evaluate the workflow for result publishing and student batch tracking.
+4.  **System Administrators**: To understand the user role hierarchy and management capabilities.
+
+### 1.4 Product Scope
+SAMS is a comprehensive academic result management platform designed to:
+-   **Digitize Result Processing**: Automate the parsing of KTU official PDF results, eliminating manual data entry.
+-   **Centralize Academic Records**: Consolidate University Results and Internal/Series Exam marks into a single database.
+-   **Streamline Batch Management**: Enable teachers to easily create student batches, bulk-register students, and track their progress.
+-   **Empower Students**: Provide a unified dashboard for viewing all academic performance metrics.
+
+### 1.5 References
+-   **IEEE Std 830-1998**: Recommended Practice for Software Requirements Specifications.
+-   **KTU Handbook**: For grade point calculation logic and credit schemes.
+-   **Project Repository**: `d:\Student Management System`.
+
+## 2. Overall Description
+
+### 2.1 Product Perspective
+SAMS is a standalone web-based system built on the MERN stack (MongoDB, Express, React, Node.js). It interfaces with:
+-   **Client Side**: React-based Single Page Application (SPA).
+-   **Server Side**: Node.js REST API with Express.
+-   **Persistence**: MongoDB Database.
+It replaces legacy file-based systems (Excel sheets on local computers) with a centralized, secure cloud-ready solution.
+
+### 2.2 Product Functions
+The major functions of the system include:
+-   **Role-Based Access Control (RBAC)**: Secure authentication and authorization.
+-   **PDF Parsing Engine**: Extraction of student grades from unstructured KTU result PDFs.
+-   **Student Data Management**: Bulk import of students via Excel templates.
+-   **Result aggregation**: Merging of fragmented result data (multiple exams/semesters) into a cohesive student profile.
+-   **Internal Assessment Tracking**: Integration of Series exam marks alongside University results.
+-   **Administrative Oversight**: Dashboard for managing staff accounts and monitoring system activity.
+
+### 2.3 User Classes and Characteristics
+-   **Exam Controller**:
+    -   *Role*: Result Publisher.
+    -   *Responsibilities*: Uploads official university result PDFs. Verifies parsing accuracy.
+    -   *Technical Skill*: Basic file handling.
+-   **Teacher**:
+    -   *Role*: Batch Manager / Class Tutor.
+    -   *Responsibilities*: Creates "Batches" (e.g., S4 CSE A). Uploads Student Lists (Excel). Monitors class performance.
+    -   *Technical Skill*: Proficient with Excel.
+-   **Admin**:
+    -   *Role*: Superuser.
+    -   *Responsibilities*: Creates and manages Teacher and Exam Controller accounts. Has visibility into all system data.
+    -   *Technical Skill*: High.
+-   **Student**:
+    -   *Role*: Viewer.
+    -   *Responsibilities*: Views personal results.
+    -   *Technical Skill*: Minimal.
+
+### 2.4 Operating Environment
+-   **Server OS**: Windows/Linux (Cross-platform Node.js runtime).
+-   **Database**: MongoDB (v4.4+ recommended).
+-   **Browser Compatibility**: Chrome (latest), Firefox, Edge.
+
+### 2.5 Design and Implementation Constraints
+-   **PDF Layout Dependency**: The system uses `pdf-parse` with regex patterns specific to the current KTU result format. Changes in the PDF layout will require code updates.
+-   **Network**: Requires a stable internet connection for accessing the cloud database (if hosted remotely).
+-   **Storage**: File uploads (PDFs) are processed in-memory buffer or temp storage; server must have sufficient RAM for large files.
+
+### 2.6 User Documentation
+-   **Inline Guidance**: The application provides tooltips for required file formats (e.g., "Excel headers must be Roll No, Name...").
+-   **README**: Technical setup guide is available in the source code root.
+
+### 2.7 Assumptions and Dependencies
+-   Faculty members will ensure student Admission Numbers and Register IDs are accurate in uploaded Excel files.
+-   The University (KTU) will not radically change the result PDF text structure without notice.
+-   Browser JavaScript is enabled on all client devices.
+
+## 3. External Interface Requirements
+
+### 3.1 User Interfaces
+-   **Login Page**: Universal login with role redirection.
+-   **Exam Controller Dashboard**:
+    -   File Upload Zone (Drag & Drop) for result PDFs.
+    -   Parsing Status Indicator (Success/Error logs).
+-   **Teacher Dashboard**:
+    -   **Batch List View**: Cards displaying active batches.
+    -   **Student Management View**: Table of students in a batch with "Edit" and "Delete" actions.
+    -   **Import Modal**: Interface to upload `.xlsx` files for bulk student registration.
+-   **Admin Dashboard**:
+    -   **Staff Management Interface**: A dedicated panel to Add, Update, and Remove staff members (Teachers, Exam Controllers, HODs).
+    -   **User Table**: Searchable list of all system users with role filters.
+-   **Student Dashboard**:
+    -   **Semester Cards**: Collapsible sections for each semester (S1, S2, etc.).
+    -   **Result Tables**: Detailed mark lists distinguishing between "University" and "Series/Internal" exams.
+
+### 3.2 Hardware Interfaces
+-   **Server**: Minimum 4GB RAM recommended for PDF processing.
+-   **Client**: Any internet-enabled device with a modern browser.
+
+### 3.3 Software Interfaces
+-   **REST API**: The backend exposes a strictly defined RESTful API using JSON for all request/response bodies.
+    -   *Format*: `application/json`
+    -   *Standard Status Codes*: 200 (OK), 201 (Created), 400 (Bad Request), 401 (Unauthorized), 500 (Server Error).
+-   **Database**: MongoDB interactions via Mongoose ODM.
+-   **External Libraries**: `pdf-parse` (PDF extraction), `xlsx` (Excel processing), `bcryptjs` (Encryption), `jsonwebtoken` (Auth).
+
+### 3.4 Communications Interfaces
+-   **Protocol**: HTTPS (Secure HTTP) is mandatory for production to protect authentication tokens.
+-   **CORS**: Cross-Origin Resource Sharing is configured to allow requests from the specific frontend domain.
+
+## 4. System Features
+
+### 4.1 Authentication and Authorization
+#### 4.1.1 Description
+Secure entry point ensuring users can only access features permitted by their role.
+
+#### 4.1.2 Functional Requirements
+-   **FR-A1**: The system shall validate user identity using Email and Password (hashed).
+-   **FR-A2**: The system shall generate a JWT (JSON Web Token) upon successful login.
+-   **FR-A3**: The frontend shall include the JWT in the `Authorization` header of all subsequent API requests.
+-   **FR-A4**: Middleware ([auth.js](file:///d:/Student%20Management%20System/backend/routes/auth.js)) shall block unauthorized access to protected routes (e.g., Students cannot access `/result/upload`).
+
+### 4.2 Exam Controller – Official Result Management
+#### 4.2.1 Description
+Enables the ingestion of official university results into the system.
+
+#### 4.2.2 Functional Requirements
+-   **FR-EC1**: Users with the `exam_controller` role shall be able to upload PDF files via the `/result/upload` endpoint.
+-   **FR-EC2**: The system shall parse the PDF text to identify student Register IDs, Course Codes, and Grades.
+-   **FR-EC3**: The system shall support regex-based extraction for multiple schemes (2019, 2024).
+-   **FR-EC4**: The parsing engine shall generate a downloadable Excel report of the extracted data for verification before final commitment to the database.
+
+### 4.3 Teacher – Batch and Student Management
+#### 4.3.1 Description
+Allows teachers to organize students into classes (batches) and maintain the student registry.
+
+#### 4.3.2 Functional Requirements
+-   **FR-T1 Create Batch**: Teachers shall be able to create named batches (e.g. "S6 CSE A") linked to their department.
+-   **FR-T2 Student Import**: Teachers shall be able to upload an Excel file (`.xlsx`) containing student details (`Admission No`, `Name`, `Registerid`) to a specific batch.
+-   **FR-T3 Auto-Registration**: The system shall automatically create User accounts for imported students, setting their password to a hash of their `Registerid`.
+-   **FR-T4 Student Edit**: Teachers shall be able to update specific student details (Name, Register ID) if errors are found.
+
+### 4.4 Student Unified Grade Dashboard
+#### 4.4.1 Description
+Provides students with a comprehensive view of their academic standing.
+
+#### 4.4.2 Functional Requirements
+-   **FR-S1 View Results**: Students shall utilize the `/result/student` endpoint to fetch their own academic records.
+-   **FR-S2 Exam Types**: The dashboard shall explicitly differentiate between result types:
+    -   **University**: Official End-Semester Examination results.
+    -   **Series**: Internal Assessment/Series Test scores.
+-   **FR-S3 Performance Metrics**: For University results, the system shall display the calculated SGPA and Total Credits earned.
+-   **FR-S4 Filter**: Results shall be filterable/grouped by Semester (e.g., S1, S2).
+
+### 4.5 Admin System Management
+#### 4.5.1 Description
+Provides administrative control over the system's user base.
+
+#### 4.5.2 Functional Requirements
+-   **FR-AD1 Staff Creation**: Admins shall be able to create user accounts for `Teacher`, `Exam Controller`, and `HOD` roles.
+-   **FR-AD2 Staff List**: Admins shall be able to view a list of all staff members and filter by role.
+-   **FR-AD3 User Modification**: Admins shall be able to update staff details (Email, Department) or delete accounts as necessary.
+-   **FR-AD4 Global Visibility**: Admins shall have read-access to all Batches and Results for system auditing purposes.
+
+## 5. Other Nonfunctional Requirements
+
+### 5.1 Performance Requirements
+-   **Response Time**: API endpoints should respond within 500ms for standard read operations.
+-   **Upload Processing**: PDF uploads (up to 10MB) should be processed and acknowledged within 30 seconds.
+
+### 5.2 Safety Requirements
+-   **Data Validation**: All inputs (Excel rows, Login forms) must be validated on the server side to prevent injection attacks or data corruption.
+-   **Error Handling**: The system must catch parsing errors (e.g., malformed PDF) and return a meaningful error message JSON, not a raw stack trace.
+
+### 5.3 Security Requirements
+-   **Password Storage**: Passwords shall never be stored in plain text. `bcryptjs` with a salt round of 10 must be used.
+-   **Session Management**: JWTs shall have a configurable expiration time to minimize session hijacking risks.
+
+### 5.4 Software Quality Attributes
+-   **Maintainability**: The codebase follows the MVC (Model-View-Controller) architecture for clear separation of concerns.
+-   **Scalability**: The MongoDB schema is designed to support thousands of result records via indexing on `registerId`.
+
+### 5.5 Business Rules
+-   **Immutable Official Results**: Once published, University results should not be editable by students or teachers (only re-uploadable/correctable by Exam Controller/Admin).
+-   **Unique Identification**: `Register ID` and `Admission No` must be unique across the entire system.
+
+## 6. Other Requirements
+-   **Logging**: Functional errors and critical system events shall be logged to a server-side file (`debug_error.log`) for post-incident analysis.
+-   **Environment Configuration**: System configuration (DB URIs, Secrets) must be managed via [.env](file:///d:/Student%20Management%20System/backend/.env) files, not hardcoded.
+
+---
+
+## Appendix A: Glossary
+-   **SGPA**: Semester Grade Point Average.
+-   **JWT**: JSON Web Token.
+-   **MERN**: MongoDB, Express, React, Node.js.
+-   **MVC**: Model-View-Controller.
+
+## Appendix B: Analysis Models
+*(See `backend/models` for Mongoose Schemas)*
+
+## Appendix C: Future Scope
+-   Automated email notifications for result publication.
+-   Detailed graphical analytics for Department Heads.

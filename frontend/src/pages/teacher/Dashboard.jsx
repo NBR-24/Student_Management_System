@@ -7,9 +7,9 @@ import TeacherResults from './Results';
 
 const TeacherDashboard = () => {
     const { logout } = useAuth();
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const [activeTab, setActiveTab] = useState('manage-batches');
     const [batches, setBatches] = useState([]);
-    const [newBatch, setNewBatch] = useState({ name: '' });
+    const [newBatch, setNewBatch] = useState({ name: '', scheme: '2024' });
     const [selectedBatch, setSelectedBatch] = useState(null);
     const [file, setFile] = useState(null);
     const [uploadMessage, setUploadMessage] = useState('');
@@ -47,7 +47,7 @@ const TeacherDashboard = () => {
         setLoading(true);
         try {
             await axios.post('/teacher/batch', newBatch);
-            setNewBatch({ name: '' });
+            setNewBatch({ name: '', scheme: '2024' });
             fetchBatches();
         } catch (error) { console.error(error); }
         setLoading(false);
@@ -143,6 +143,19 @@ const TeacherDashboard = () => {
                                     required
                                 />
                             </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Scheme</label>
+                                <select
+                                    className="mt-1 w-full px-4 py-3 rounded-xl bg-gray-50 border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all font-medium"
+                                    value={newBatch.scheme}
+                                    onChange={(e) => setNewBatch({ ...newBatch, scheme: e.target.value })}
+                                    required
+                                >
+                                    <option value="2024">2024</option>
+                                    <option value="2019">2019</option>
+                                </select>
+                            </div>
+                            {/* Department input removed as per user request (Auto-assigned) */}
                             <button
                                 disabled={loading}
                                 className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-colors shadow-lg shadow-gray-200"
@@ -362,12 +375,12 @@ const TeacherDashboard = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'dashboard':
+            case 'manage-batches':
                 return renderDashboard();
             case 'assignments':
                 return <TeacherAssignments />;
             case 'results':
-                return <TeacherResults />;
+                return <TeacherResults batches={batches} />;
             default:
                 return renderDashboard();
         }
@@ -388,6 +401,8 @@ const TeacherDashboard = () => {
 
                 <nav className="flex-1 px-4 space-y-[16px] py-2">
                     {[
+                        { id: 'manage-batches', label: 'Manage Batches', icon: LayoutDashboard },
+                        { id: 'assignments', label: 'Assignments', icon: Calculator },
                         { id: 'results', label: 'Results', icon: CheckSquare },
                         { id: 'dashboard', label: 'Manage Batches', icon: LayoutDashboard },
                         { id: 'assignments', label: 'Assignments', icon: Calculator },
@@ -428,7 +443,7 @@ const TeacherDashboard = () => {
                 <header className="sticky top-0 z-10 bg-[#F5F7FA]/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-extrabold text-gray-900 capitalize text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600">
-                            {activeTab === 'dashboard' ? 'Manage Batches' : activeTab}
+                            {activeTab === 'manage-batches' ? 'Manage Batches' : activeTab}
                         </h1>
                         <p className="text-sm text-gray-500 font-medium mt-0.5">Welcome back, Professor</p>
                     </div>

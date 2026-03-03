@@ -54,7 +54,7 @@ const connectDB = async () => {
                     instance: {
                         dbPath: path.join(dataDir, 'db'),
                         storageEngine: 'wiredTiger',
-                        // port: 27017 // Optional: Force a port to avoid random ones
+                        port: 27017 // Fixed port for easier access via Compass
                     },
                     binary: {
                         version: '6.0.4',
@@ -120,6 +120,15 @@ app.get('/debug-users', async (req, res) => {
     const User = require('./models/User');
     const users = await User.find({}, 'name email role registerId admissionNo');
     res.json(users);
+});
+
+app.get('/debug-results', async (req, res) => {
+    const Result = require('./models/Result');
+    const results = await Result.find({}).sort({ createdAt: -1 }).limit(20);
+    res.json({
+        count: await Result.countDocuments(),
+        results
+    });
 });
 
 app.use('/api/student', require('./routes/student'));
