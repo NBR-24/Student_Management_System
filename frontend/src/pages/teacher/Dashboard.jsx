@@ -122,22 +122,22 @@ const TeacherDashboard = () => {
             {/* Left Column: Actions */}
             <div className="lg:col-span-1 space-y-8">
                 {/* Create Batch Card */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 bg-gradient-to-r from-primary-600 to-violet-600">
+                <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-6 bg-gradient-to-r from-[#1A8AE5] to-[#0066CC]">
                         <h2 className="text-lg font-bold text-white flex items-center">
                             <Plus className="mr-2 h-5 w-5 opacity-80" />
                             New Batch
                         </h2>
-                        <p className="text-primary-100 text-sm mt-1">Initialize a new student group</p>
+                        <p className="text-white/80 text-sm mt-1">Initialize a new student group</p>
                     </div>
                     <div className="p-6">
                         <form onSubmit={handleCreateBatch} className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Batch ID / Name</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">New Batch Name</label>
                                 <input
                                     type="text"
                                     placeholder="e.g. Class of 2025"
-                                    className="mt-1 w-full px-4 py-3 rounded-xl bg-gray-50 border-transparent focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all font-medium"
+                                    className="mt-1 w-full px-4 py-3 rounded-xl bg-gray-50 border-transparent focus:bg-white focus:border-[#1A8AE5] focus:ring-4 focus:ring-[#1A8AE5]/10 transition-all font-medium"
                                     value={newBatch.name}
                                     onChange={(e) => setNewBatch({ ...newBatch, name: e.target.value })}
                                     required
@@ -167,13 +167,13 @@ const TeacherDashboard = () => {
                 </div>
 
                 {/* Upload Card */}
-                <div className="bg-white rounded-3xl shadow-lg shadow-primary-500/5 border border-primary-100 overflow-hidden relative">
+                <div className="bg-white rounded-[24px] shadow-lg shadow-[#1A8AE5]/5 border border-[#1A8AE5]/10 overflow-hidden relative">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Upload className="h-24 w-24 text-primary-600" />
+                        <Upload className="h-24 w-24 text-[#1A8AE5]" />
                     </div>
                     <div className="p-6">
                         <h2 className="text-lg font-bold text-gray-900 flex items-center mb-4">
-                            <Upload className="mr-2 h-5 w-5 text-primary-600" />
+                            <Upload className="mr-2 h-5 w-5 text-[#1A8AE5]" />
                             Bulk Upload
                         </h2>
 
@@ -181,7 +181,7 @@ const TeacherDashboard = () => {
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Target Batch</label>
                                 <select
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border-transparent focus:ring-4 focus:ring-primary-50 outline-none cursor-pointer"
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border-transparent focus:ring-4 focus:ring-[#1A8AE5]/10 outline-none cursor-pointer"
                                     onChange={(e) => setSelectedBatch(e.target.value)}
                                     required
                                 >
@@ -190,7 +190,7 @@ const TeacherDashboard = () => {
                                 </select>
                             </div>
 
-                            <div className="border-2 border-dashed border-primary-200 rounded-2xl p-6 text-center hover:bg-primary-50 transition-colors group cursor-pointer relative">
+                            <div className="border-2 border-dashed border-[#1A8AE5]/20 rounded-2xl p-6 text-center hover:bg-[#1A8AE5]/5 transition-colors group cursor-pointer relative">
                                 <input
                                     type="file"
                                     accept=".xlsx, .xls, .csv"
@@ -198,10 +198,10 @@ const TeacherDashboard = () => {
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div className="flex flex-col items-center">
-                                    <div className="h-10 w-10 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                    <div className="h-10 w-10 bg-[#1A8AE5]/10 text-[#1A8AE5] rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <FileText className="h-5 w-5" />
                                     </div>
-                                    <span className="text-sm font-medium text-gray-600 group-hover:text-primary-700">
+                                    <span className="text-sm font-medium text-gray-600 group-hover:text-[#1A8AE5]">
                                         {file ? file.name : 'Drop Excel file here'}
                                     </span>
                                     <span className="text-xs text-gray-400 mt-1">.xlsx or .csv</span>
@@ -209,14 +209,14 @@ const TeacherDashboard = () => {
                             </div>
 
                             {uploadMessage && (
-                                <div className={`text-xs font-bold p-3 rounded-lg text-center ${uploadMessage.includes('SUCCESS') ? 'bg-green-100 text-green-700' : 'bg-primary-100 text-primary-700'}`}>
+                                <div className={`text-xs font-bold p-3 rounded-lg text-center ${uploadMessage.includes('SUCCESS') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                     {uploadMessage}
                                 </div>
                             )}
 
                             <button
                                 disabled={!file || !selectedBatch}
-                                className="w-full py-3 bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20"
+                                className="w-full py-3 bg-[#1A8AE5] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold hover:bg-[#1570B9] transition-all shadow-lg shadow-[#1A8AE5]/20"
                             >
                                 Process & Generate Logins
                             </button>
@@ -232,7 +232,7 @@ const TeacherDashboard = () => {
                         <h2 className="text-2xl font-bold text-gray-900">Active Batches</h2>
                         <p className="text-gray-500">Overview of all student groups under your management.</p>
                     </div>
-                    <span className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-xs font-bold">
+                    <span className="bg-[#1A8AE5]/10 text-[#1A8AE5] px-3 py-1 rounded-full text-xs font-bold">
                         {totalBatches} Total
                     </span>
                 </div>
@@ -242,17 +242,17 @@ const TeacherDashboard = () => {
                         <div
                             key={batch._id}
                             onClick={() => openBatchDetails(batch)}
-                            className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group cursor-pointer"
+                            className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 hover:shadow-md transition-shadow group cursor-pointer"
                         >
                             <div className="flex justify-between items-start">
-                                <div className="h-12 w-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                <div className="h-12 w-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-[#1A8AE5] group-hover:text-white transition-colors">
                                     <Users className="h-6 w-6" />
                                 </div>
-                                <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-primary-500 transition-colors" />
+                                <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-[#1A8AE5] transition-colors" />
                             </div>
 
                             <div className="mt-4">
-                                <h3 className="font-bold text-lg text-gray-900 group-hover:text-primary-700 transition-colors">{batch.name}</h3>
+                                <h3 className="font-bold text-lg text-gray-900 group-hover:text-[#1A8AE5] transition-colors">{batch.name}</h3>
                                 <p className="text-sm text-gray-500 font-medium">{batch.branch}</p>
                             </div>
 
@@ -276,7 +276,7 @@ const TeacherDashboard = () => {
                         </div>
                     ))}
                     {totalBatches === 0 && (
-                        <div className="col-span-2 py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200">
+                        <div className="col-span-2 py-12 text-center bg-white rounded-[24px] border border-dashed border-gray-200">
                             <div className="mx-auto h-12 w-12 text-gray-300">
                                 <Users className="h-full w-full" />
                             </div>
@@ -326,7 +326,7 @@ const TeacherDashboard = () => {
                                         />
                                     </div>
                                     <div className="flex space-x-2">
-                                        <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium">Save Changes</button>
+                                        <button type="submit" className="px-4 py-2 bg-[#1A8AE5] text-white rounded-lg font-medium">Save Changes</button>
                                         <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium">Cancel</button>
                                     </div>
                                 </form>
@@ -349,7 +349,7 @@ const TeacherDashboard = () => {
                                             <td className="px-4 py-3 text-gray-600 font-mono text-xs">{student.admissionNo}</td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end space-x-2">
-                                                    <button onClick={() => startEditStudent(student)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                                                    <button onClick={() => startEditStudent(student)} className="p-1.5 text-[#1A8AE5] hover:bg-blue-50 rounded-lg">
                                                         <Edit2 className="h-4 w-4" />
                                                     </button>
                                                     <button onClick={() => handleDeleteStudent(student._id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
@@ -387,38 +387,39 @@ const TeacherDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
+        <div className="min-h-screen bg-[#F5F7FA] flex font-sans text-[#1F2937]">
             {/* Sidebar */}
-            <aside className="fixed inset-y-0 left-0 w-72 bg-white border-r border-gray-100 hidden lg:flex flex-col z-20">
-                <div className="p-8">
-                    <div className="flex items-center space-x-3 text-primary-600 mb-2">
-                        <div className="h-10 w-10 bg-primary-50 rounded-xl flex items-center justify-center">
-                            <GraduationCap className="h-6 w-6" />
+            <aside className="fixed inset-y-0 left-0 w-[250px] bg-white border-r border-gray-100 hidden lg:flex flex-col z-20">
+                <div className="pt-[24px] px-6 pb-4">
+                    <div className="flex items-center space-x-3 text-[#1A8AE5] mb-8">
+                        <div className="h-8 w-8 bg-[#1A8AE5]/10 rounded-lg flex items-center justify-center">
+                            <GraduationCap className="h-5 w-5 text-[#1A8AE5]" />
                         </div>
-                        <span className="text-xl font-bold tracking-tight text-gray-900">Academia</span>
+                        <span className="text-xl font-bold tracking-tight text-gray-900">EduCore</span>
                     </div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-widest pl-14">Teacher Portal</p>
                 </div>
 
-                <nav className="flex-1 px-4 space-y-2 py-4">
+                <nav className="flex-1 px-4 space-y-[16px] py-2">
                     {[
                         { id: 'manage-batches', label: 'Manage Batches', icon: LayoutDashboard },
                         { id: 'assignments', label: 'Assignments', icon: Calculator },
                         { id: 'results', label: 'Results', icon: CheckSquare },
+                        { id: 'dashboard', label: 'Manage Batches', icon: LayoutDashboard },
+                        { id: 'assignments', label: 'Assignments', icon: Calculator },
                     ].map(item => (
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center space-x-3.5 px-6 py-3.5 rounded-2xl transition-all duration-200 group font-medium ${activeTab === item.id
-                                ? 'bg-primary-50 text-primary-700 shadow-sm shadow-primary-500/10'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            className={`w-full flex items-center gap-[12px] px-[18px] py-[12px] rounded-[10px] transition-all duration-200 ease-in-out group font-medium relative ${activeTab === item.id
+                                ? 'bg-[#E8F3FD] text-[#1A8AE5]'
+                                : 'text-[#4B5563] hover:bg-[#F3F4F6] bg-transparent'
                                 }`}
                         >
-                            <item.icon className={`h-5 w-5 ${activeTab === item.id ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                            <span>{item.label}</span>
                             {activeTab === item.id && (
-                                <ChevronRight className="h-4 w-4 ml-auto text-primary-400" />
+                                <div className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-1 bg-[#1A8AE5] rounded-full"></div>
                             )}
+                            <item.icon className={`w-[18px] h-[18px] ${activeTab === item.id ? 'text-[#1A8AE5]' : 'text-gray-400 group-hover:text-gray-500'}`} />
+                            <span className="text-[15px]">{item.label}</span>
                         </button>
                     ))}
                 </nav>
@@ -426,20 +427,20 @@ const TeacherDashboard = () => {
                 <div className="p-4 mt-auto">
                     <button
                         onClick={logout}
-                        className="w-full flex items-center space-x-3 px-6 py-4 rounded-2xl text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors group"
+                        className="w-full flex items-center gap-[12px] px-[18px] py-[12px] rounded-[10px] text-[#4B5563] hover:bg-red-50 hover:text-red-600 transition-colors duration-200 ease-in-out group mt-4"
                     >
-                        <LogOut className="h-5 w-5 group-hover:text-red-500 transition-colors" />
-                        <span className="font-medium">Sign Out</span>
+                        <LogOut className="w-[18px] h-[18px] group-hover:text-red-500 transition-colors" />
+                        <span className="font-medium text-[15px]">Logout</span>
                     </button>
-                    <div className="mt-4 px-6 pb-4 text-center">
-                        <p className="text-xs text-gray-300 font-medium">© 2025 Academia Inc.</p>
+                    <div className="mt-4 px-2 pb-2 text-center">
+                        <p className="text-[10px] text-gray-300 font-medium">© 2025 EduCore Inc.</p>
                     </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="lg:ml-72 flex-1 min-h-screen">
-                <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between">
+            <main className="lg:ml-[250px] flex-1 min-h-screen">
+                <header className="sticky top-0 z-10 bg-[#F5F7FA]/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-extrabold text-gray-900 capitalize text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600">
                             {activeTab === 'manage-batches' ? 'Manage Batches' : activeTab}
@@ -447,7 +448,7 @@ const TeacherDashboard = () => {
                         <p className="text-sm text-gray-500 font-medium mt-0.5">Welcome back, Professor</p>
                     </div>
                     <div className="flex items-center space-x-4">
-                        <div className="h-10 w-10 bg-gradient-to-br from-primary-500 to-violet-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg shadow-primary-500/20 ring-4 ring-white">
+                        <div className="h-10 w-10 bg-gradient-to-br from-[#1A8AE5] to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20 ring-4 ring-white">
                             P
                         </div>
                     </div>

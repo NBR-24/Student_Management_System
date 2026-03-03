@@ -8,17 +8,17 @@ export default {
         extend: {
             colors: {
                 primary: {
-                    50: '#f5f3ff',
-                    100: '#ede9fe',
-                    200: '#ddd6fe',
-                    300: '#c4b5fd',
-                    400: '#a78bfa',
-                    500: '#8b5cf6',
-                    600: '#7c3aed',
-                    700: '#6d28d9',
-                    800: '#5b21b6',
-                    900: '#4c1d95',
-                    950: '#2e1065',
+                    50: '#E8F3FD',  // Active Sidebar Background
+                    100: '#D1E8FC',
+                    200: '#A3D3F9',
+                    300: '#76BEF6',
+                    400: '#48A9F3',
+                    500: '#1A8AE5',  // Base Brand Color
+                    600: '#0E6EB8',  // Hover / Darker
+                    700: '#0B5894',  // Text / Deep
+                    800: '#084270',
+                    900: '#052C4B',
+                    950: '#031D32',
                 }
             }
         },

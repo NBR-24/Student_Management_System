@@ -95,21 +95,27 @@ const AdminDashboard = () => {
     return (
         <div className="flex h-screen bg-slate-50 font-sans">
             {/* Sidebar */}
-            <aside className="w-72 bg-white border-r border-gray-100 flex-shrink-0 hidden md:flex flex-col shadow-sm z-10">
-                <div className="p-8 pb-4">
-                    <div className="flex items-center space-x-3 text-primary-700">
-                        <School className="h-8 w-8" />
-                        <span className="text-xl font-bold tracking-tight">EduAdmin</span>
+            {/* Sidebar */}
+            <aside className="w-[250px] bg-white border-r border-gray-100 flex-shrink-0 hidden md:flex flex-col shadow-sm z-10">
+                <div className="pt-[24px] px-6 pb-4">
+                    <div className="flex items-center space-x-3 text-[#1A8AE5] mb-8">
+                        <div className="h-8 w-8 bg-[#1A8AE5]/10 rounded-lg flex items-center justify-center">
+                            <School className="h-5 w-5 text-[#1A8AE5]" />
+                        </div>
+                        <span className="text-xl font-bold tracking-tight text-gray-900">EduCore</span>
                     </div>
                 </div>
 
-                <nav className="mt-8 px-4 space-y-2 flex-1">
+                <nav className="flex-1 px-4 space-y-[16px] py-2">
                     <button
-                        onClick={() => setActiveTab('dashboard')}
-                        className={`flex items-center space-x-3 w-full px-4 py-3.5 rounded-xl transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-primary-50 text-primary-700 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
+                        onClick={() => setActiveTab('teachers')}
+                        className={`w-full flex items-center gap-[12px] px-[18px] py-[12px] rounded-[10px] transition-all duration-200 ease-in-out group font-medium relative ${activeTab === 'teachers' ? 'bg-[#E8F3FD] text-[#1A8AE5]' : 'text-[#4B5563] hover:bg-[#F3F4F6] bg-transparent'}`}
                     >
-                        <LayoutDashboard className="h-5 w-5" />
-                        <span>Dashboard</span>
+                        {activeTab === 'teachers' && (
+                            <div className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-1 bg-[#1A8AE5] rounded-full"></div>
+                        )}
+                        <Users className={`w-[18px] h-[18px] ${activeTab === 'teachers' ? 'text-[#1A8AE5]' : 'text-gray-400 group-hover:text-gray-500'}`} />
+                        <span className="text-[15px]">Manage Teachers</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('staff')}
@@ -120,14 +126,17 @@ const AdminDashboard = () => {
                     </button>
                 </nav>
 
-                <div className="p-4 border-t border-gray-100">
+                <div className="p-4 mt-auto">
                     <button
                         onClick={logout}
-                        className="flex items-center space-x-3 w-full px-4 py-3 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        className="w-full flex items-center gap-[12px] px-[18px] py-[12px] rounded-[10px] text-[#4B5563] hover:bg-red-50 hover:text-red-600 transition-colors duration-200 ease-in-out group mt-4"
                     >
-                        <LogOut className="h-5 w-5" />
-                        <span className="font-medium">Sign Out</span>
+                        <LogOut className="w-[18px] h-[18px] group-hover:text-red-500 transition-colors" />
+                        <span className="font-medium text-[15px]">Sign Out</span>
                     </button>
+                    <div className="mt-4 px-2 pb-2 text-center">
+                        <p className="text-[10px] text-gray-300 font-medium">© 2025 EduCore Inc.</p>
+                    </div>
                 </div>
             </aside>
 
