@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
-import axios from '../../api/axios';
-import { useAuth } from '../../context/AuthContext';
-import { LogOut, User, Book, CreditCard, Bell, ChevronRight, GraduationCap, Trophy, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
+import StudentHome from './Home';
+import StudentResults from './Results';
 
 const StudentDashboard = () => {
     const { logout } = useAuth();
@@ -19,7 +17,7 @@ const StudentDashboard = () => {
         fetchProfile();
     }, []);
 
-    if (!profile) return <div className="h-screen flex items-center justify-center bg-primary-50 text-primary-600 font-bold animate-pulse">Loading Profile...</div>;
+    if (!profile) return <div className="h-screen flex items-center justify-center bg-violet-50 text-primary-600 font-bold animate-pulse">Loading Profile...</div>;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24 font-sans max-w-md mx-auto relative shadow-2xl">
@@ -68,7 +66,7 @@ const StudentDashboard = () => {
                 <h3 className="text-lg font-bold text-gray-800 mb-4 px-1">Quick Access</h3>
                 <div className="grid grid-cols-2 gap-4">
                     {[
-                        { icon: User, label: 'Profile', color: 'text-primary-600', bg: 'bg-primary-50', path: '/student' },
+                        { icon: User, label: 'Profile', color: 'text-violet-600', bg: 'bg-violet-50', path: '/student' },
                         { icon: Book, label: 'Courses', color: 'text-pink-600', bg: 'bg-pink-50', path: '/student' },
                         { icon: Trophy, label: 'Results', color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/student/results' },
                         { icon: FileText, label: 'Assign.', color: 'text-amber-600', bg: 'bg-amber-50', path: '/student/assignments' },

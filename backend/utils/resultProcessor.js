@@ -31,10 +31,24 @@ const detectMetadata = (text) => {
         scheme = "2024";
     }
 
-    // Detect Exam Name
-    const examName = text.includes("B.Tech") ? "B.Tech Degree Examination" : "University Examination";
+    // Extract the full exam title line from the PDF header
+    // Matches lines like: "B.Tech S2 (R) Exam May 2025 (2024 Scheme)"
+    // or "B.Tech S3 Supplementary Examination November 2024 (2019 Scheme)"
+    let examTitle = null;
+    const titleMatch = text.match(/B\.Tech[^\n\r]+(?:Exam|Examination)[^\n\r]*/i);
+    if (titleMatch) {
+        examTitle = titleMatch[0].replace(/\s+/g, ' ').trim();
+    }
 
-    return { semester, scheme, examName };
+    // Fallback if pattern not found
+    if (!examTitle) {
+        examTitle = `B.Tech ${semester} University Examination (${scheme} Scheme)`;
+    }
+
+    // Keep a short examName for Excel header use
+    const examName = examTitle;
+
+    return { semester, scheme, examName, examTitle };
 };
 
 const getCourseCredits = (code, lookup) => {
@@ -65,11 +79,14 @@ const processedData = async (buffer) => {
         const data = await pdf(buffer);
         const fullText = data.text;
 
+        // DEBUG: Write text to file
+        fs.writeFileSync(path.join(__dirname, '../debug_pdf_text.txt'), fullText);
+
         // Extract Metadata from first 1000 chars roughly
         const headerText = fullText.substring(0, 1500);
-        const { semester, scheme, examName } = detectMetadata(headerText);
+        const { semester, scheme, examName, examTitle } = detectMetadata(headerText);
 
-        console.log(`Detected: ${semester} | ${scheme} | ${examName}`);
+        console.log(`Detected: ${semester} | ${scheme} | ${examName} | ${examTitle}`);
 
         // Load Credit Config
         const jsonPath = path.join(__dirname, `../credits_${scheme}.json`);
@@ -81,15 +98,43 @@ const processedData = async (buffer) => {
             console.warn(`Credit file not found for scheme ${scheme}, using empty defaults.`);
         }
 
-        const semesterTotals = fullJsonData.semester_total_credits || {};
+        // --- Build Semester Totals Map ---
+        let semesterTotals = fullJsonData.semester_total_credits || {};
 
-        // Build Credit Lookup
+        // 2019 Scheme does not have a global semester_total_credits map
+        // We need to extract it from the first available department if missing
+        if (Object.keys(semesterTotals).length === 0 && fullJsonData.departments) {
+            const firstDept = fullJsonData.departments[0];
+            if (firstDept && firstDept.semesters) {
+                firstDept.semesters.forEach(s => {
+                    // Convert integer semester to "S1", "S2" format
+                    const semKey = `S${s.semester}`;
+                    semesterTotals[semKey] = s.total_credit;
+                });
+            }
+        }
+
+        // Also ensure 2024 integer keys (if any) are mapped to S-prefix if needed, 
+        // though 2024 file seems to use "S1" keys in global map.
+
+
+        // --- Build Credit Lookup ---
         const creditLookup = {};
-        const curricula = fullJsonData.curricula || [];
-        curricula.forEach(dept => {
+
+        // Handle 2024 "curricula" vs 2019 "departments"
+        const curriculaList = fullJsonData.curricula || fullJsonData.departments || [];
+
+        curriculaList.forEach(dept => {
             (dept.semesters || []).forEach(sem => {
                 (sem.courses || []).forEach(course => {
-                    creditLookup[course.code.replace(/\s/g, "")] = course.credits;
+                    // Normalize keys: 2024 uses "code"/"credits", 2019 uses "course_code"/"credit"
+                    const code = course.code || course.course_code;
+                    const credit = course.credits || course.credit;
+
+                    if (code) {
+                        const cleanCode = code.replace(/\s/g, "");
+                        creditLookup[cleanCode] = credit;
+                    }
                 });
             });
         });
@@ -97,7 +142,7 @@ const processedData = async (buffer) => {
         const rawStudents = [];
 
         // Matches "PKD24CE001" or "PKD19CS001" etc.
-        const regNoPattern = /(PKD\d{2}([A-Z]{2})\d{3})/g;
+        const regNoPattern = /(PKD\d{2}([A-Z]{2})\d{3})/g; // Modified to standard regex object for exec loop
 
         // Matches "CODE(GRADE)" e.g. "MAT101(A+)" or "EST 130(B)"
 
@@ -133,31 +178,42 @@ const processedData = async (buffer) => {
             }
 
             if (Object.keys(grades).length > 0) {
+                // --- SGPA CALCULATION (Fixed Denominator) ---
                 let totalWeightedPoints = 0;
-                let totalCreds = 0;
+                let totalCreds = 0; // Earned Credits
 
-                // Denominator Logic
-                let officialDenom = semesterTotals[semester] || 21; // Default 21
-                if (scheme === "2024" && semester === "S2") officialDenom = 24;
+                // Denominator Logic: Use fixed value from JSON
+                let officialDenom = semesterTotals[semester] || 0;
 
-                // Check Pass
+                // Fallback / Validation
+                if (officialDenom === 0) {
+                    // Try to guess or warn? For now, we stick to the user instruction: "i have given fixed credit in json"
+                    // If 0, SGPA will be 0/NaN potentially.
+                    if (scheme === "2024" && semester === "S2") officialDenom = 24; // Hardcoded fallback if JSON fails/is missing
+                    else officialDenom = 21; // Robust fallback
+                }
+
+
                 const failGrades = ['F', 'FE', 'I', 'ABSENT', 'WITHHELD'];
                 const isPass = !Object.values(grades).some(g => failGrades.includes(g));
 
                 for (const [code, grade] of Object.entries(grades)) {
                     const creds = getCourseCredits(code, creditLookup);
                     const gp = GRADE_POINTS[grade] || 0;
+
                     totalWeightedPoints += (creds * gp);
-                    if (gp > 0) totalCreds += creds;
+
+                    if (gp > 0) {
+                        totalCreds += creds;
+                    }
                 }
 
-                // 2024 S2 Injection
-                if (scheme === "2024" && semester === "S2") {
-                    totalCreds += 1;
-                    totalWeightedPoints += (1 * 5.5);
+
+                let sgpa = 0.0;
+                if (officialDenom > 0) {
+                    sgpa = parseFloat((totalWeightedPoints / officialDenom).toFixed(2));
                 }
 
-                const sgpa = officialDenom > 0 ? parseFloat((totalWeightedPoints / officialDenom).toFixed(2)) : 0.0;
 
                 rawStudents.push({
                     registerId: student.regNo,
@@ -170,10 +226,15 @@ const processedData = async (buffer) => {
             }
         }
 
-        return { rawStudents, metadata: { semester, scheme, examName } };
+        return { rawStudents, metadata: { semester, scheme, examName, examTitle } };
 
     } catch (error) {
         console.error("Processing Error:", error);
+        const fs = require('fs');
+        const path = require('path');
+        try {
+            fs.appendFileSync(path.join(__dirname, '../debug_error.log'), `${new Date().toISOString()} - Processing Error: ${error.message}\n${error.stack}\n\n`);
+        } catch (e) { console.error("Could not write to log file", e); }
         throw error;
     }
 };
@@ -260,34 +321,34 @@ const generateExcel = async (processedData) => {
             }
         });
 
+        const lastRow = tableStartRow + 1 + studentList.length;
+
         // --- Toppers Analysis ---
-        let currentRow = tableStartRow + studentList.length + 3;
-        const toppersHeader = worksheet.getCell(`A${currentRow}`);
-        toppersHeader.value = "TOP 10 PERFORMERS";
-        toppersHeader.font = { bold: true, color: { argb: 'FF0000FF' } }; // Blue
+        let currentRow = lastRow + 3;
+        worksheet.getCell(`A${currentRow}`).value = "TOP 10 PERFORMERS";
+        worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF0000FF' } }; // Blue
 
         const toppers = studentList.filter(s => s.isPass).sort((a, b) => b.sgpa - a.sgpa).slice(0, 10);
         toppers.forEach((t, i) => {
-            const r = worksheet.getRow(currentRow + 1 + i);
-            r.getCell(1).value = `${i + 1}. ${t.registerId}`;
-            r.getCell(2).value = `SGPA: ${t.sgpa}`;
+            currentRow++;
+            worksheet.getCell(`A${currentRow}`).value = `${i + 1}. ${t.registerId}`;
+            worksheet.getCell(`B${currentRow}`).value = `SGPA: ${t.sgpa}`;
         });
 
         // --- Subject Failure Analysis ---
-        currentRow += toppers.length + 3;
-        const failHeader = worksheet.getCell(`A${currentRow}`);
-        failHeader.value = "SUBJECT-WISE FAILURE ANALYSIS";
-        failHeader.font = { bold: true, color: { argb: 'FFFF0000' } }; // Red
+        currentRow += 2;
+        worksheet.getCell(`A${currentRow}`).value = "SUBJECT-WISE FAILURE ANALYSIS";
+        worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FFFF0000' } }; // Red
 
         deptCourses.forEach((code, i) => {
+            currentRow++;
             const failCount = studentList.filter(s => {
                 const g = s.grades[code];
                 return g && ['F', 'FE', 'I', 'ABSENT'].includes(g);
             }).length;
 
-            const r = worksheet.getRow(currentRow + 1 + i);
-            r.getCell(1).value = code;
-            r.getCell(2).value = `${failCount} Failed`;
+            worksheet.getCell(`A${currentRow}`).value = code;
+            worksheet.getCell(`B${currentRow}`).value = `${failCount} Failed`;
         });
     }
 

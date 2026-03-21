@@ -44,6 +44,14 @@ const ResultSchema = new mongoose.Schema({
     published: {
         type: Boolean,
         default: true
+    },
+    sgpa: {
+        type: Number,
+        default: 0
+    },
+    totalCredits: {
+        type: Number,
+        default: 0
     }
 }, { timestamps: true });
 
