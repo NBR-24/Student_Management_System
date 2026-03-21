@@ -1,0 +1,511 @@
+[
+  {
+    "_id": "6995f15aef42605ceae6c8c3",
+    "name": "Admin User",
+    "email": "admin@admin.com",
+    "role": "admin"
+  },
+  {
+    "_id": "6995fdc787f66fe75675e10b",
+    "name": "teacher",
+    "email": "teacher@teacher.com",
+    "role": "teacher"
+  },
+  {
+    "_id": "69a67800bb97da7e22997cb4",
+    "name": "AFLAHA C",
+    "role": "student",
+    "admissionNo": "23B001",
+    "registerId": "PKD23CS001"
+  },
+  {
+    "_id": "69a67800bb97da7e22997cb7",
+    "name": "AFRAA ABDUL AZEEZ",
+    "role": "student",
+    "admissionNo": "23B002",
+    "registerId": "PKD23CS002"
+  },
+  {
+    "_id": "69a67800bb97da7e22997cba",
+    "name": "AJISHA T P",
+    "role": "student",
+    "admissionNo": "23B003",
+    "registerId": "PKD23CS003"
+  },
+  {
+    "_id": "69a67800bb97da7e22997cbd",
+    "name": "AKASH S",
+    "role": "student",
+    "admissionNo": "23B004",
+    "registerId": "PKD23CS004"
+  },
+  {
+    "_id": "69a67800bb97da7e22997cc0",
+    "name": "AKSHAY K V",
+    "role": "student",
+    "admissionNo": "23B005",
+    "registerId": "PKD23CS005"
+  },
+  {
+    "_id": "69a67800bb97da7e22997cc3",
+    "name": "ALKA A S",
+    "role": "student",
+    "admissionNo": "23B006",
+    "registerId": "PKD23CS006"
+  },
+  {
+    "_id": "69a67800bb97da7e22997cc6",
+    "name": "ANJANA P M",
+    "role": "student",
+    "admissionNo": "23B007",
+    "registerId": "PKD23CS007"
+  },
+  {
+    "_id": "69a67801bb97da7e22997cc9",
+    "name": "ANSAAF",
+    "role": "student",
+    "admissionNo": "23B008",
+    "registerId": "PKD23CS008"
+  },
+  {
+    "_id": "69a67801bb97da7e22997ccc",
+    "name": "ARDHRA K",
+    "role": "student",
+    "admissionNo": "23B009",
+    "registerId": "PKD23CS009"
+  },
+  {
+    "_id": "69a67801bb97da7e22997ccf",
+    "name": "ARDRA A S",
+    "role": "student",
+    "admissionNo": "23B010",
+    "registerId": "PKD23CS010"
+  },
+  {
+    "_id": "69a67801bb97da7e22997cd2",
+    "name": "ARJUN A R",
+    "role": "student",
+    "admissionNo": "23B011",
+    "registerId": "PKD23CS011"
+  },
+  {
+    "_id": "69a67801bb97da7e22997cd5",
+    "name": "ASHNA E L",
+    "role": "student",
+    "admissionNo": "23B012",
+    "registerId": "PKD23CS012"
+  },
+  {
+    "_id": "69a67801bb97da7e22997cd8",
+    "name": "ATHULKRISHNA RAJESH",
+    "role": "student",
+    "admissionNo": "23B013",
+    "registerId": "PKD23CS013"
+  },
+  {
+    "_id": "69a67802bb97da7e22997cdb",
+    "name": "BHADRA P NAIR",
+    "role": "student",
+    "admissionNo": "23B014",
+    "registerId": "PKD23CS014"
+  },
+  {
+    "_id": "69a67802bb97da7e22997cde",
+    "name": "BIBINA H",
+    "role": "student",
+    "admissionNo": "23B015",
+    "registerId": "PKD23CS015"
+  },
+  {
+    "_id": "69a67802bb97da7e22997ce1",
+    "name": "BINOY KP",
+    "role": "student",
+    "admissionNo": "23B016",
+    "registerId": "PKD23CS016"
+  },
+  {
+    "_id": "69a67802bb97da7e22997ce4",
+    "name": "BRILLIAN XAVIER",
+    "role": "student",
+    "admissionNo": "23B017",
+    "registerId": "PKD23CS017"
+  },
+  {
+    "_id": "69a67802bb97da7e22997ce7",
+    "name": "DEEPUMON M S",
+    "role": "student",
+    "admissionNo": "23B018",
+    "registerId": "PKD23CS018"
+  },
+  {
+    "_id": "69a67802bb97da7e22997cea",
+    "name": "DEVIKA P DINESH",
+    "role": "student",
+    "admissionNo": "23B019",
+    "registerId": "PKD23CS019"
+  },
+  {
+    "_id": "69a67803bb97da7e22997ced",
+    "name": "FATHIMATHUL ASNA V P",
+    "role": "student",
+    "admissionNo": "23B020",
+    "registerId": "PKD23CS020"
+  },
+  {
+    "_id": "69a67803bb97da7e22997cf0",
+    "name": "FAYIROOSA JAHAAN",
+    "role": "student",
+    "admissionNo": "23B021",
+    "registerId": "PKD23CS021"
+  },
+  {
+    "_id": "69a67803bb97da7e22997cf3",
+    "name": "HANIYA SAJAD AV",
+    "role": "student",
+    "admissionNo": "23B022",
+    "registerId": "PKD23CS022"
+  },
+  {
+    "_id": "69a67803bb97da7e22997cf6",
+    "name": "HARSHAN P V",
+    "role": "student",
+    "admissionNo": "23B023",
+    "registerId": "PKD23CS023"
+  },
+  {
+    "_id": "69a67803bb97da7e22997cf9",
+    "name": "HREDYA V",
+    "role": "student",
+    "admissionNo": "23B024",
+    "registerId": "PKD23CS025"
+  },
+  {
+    "_id": "69a67803bb97da7e22997cfc",
+    "name": "HUDA ABDUL JALEEL",
+    "role": "student",
+    "admissionNo": "23B025",
+    "registerId": "PKD23CS026"
+  },
+  {
+    "_id": "69a67804bb97da7e22997cff",
+    "name": "HUDA JABIR KARUVATTIL",
+    "role": "student",
+    "admissionNo": "23B026",
+    "registerId": "PKD23CS027"
+  },
+  {
+    "_id": "69a67804bb97da7e22997d02",
+    "name": "IMTHIYAS IBNU IBRAHIM",
+    "role": "student",
+    "admissionNo": "23B027",
+    "registerId": "PKD23CS028"
+  },
+  {
+    "_id": "69a67804bb97da7e22997d05",
+    "name": "JISTO PRAKASH",
+    "role": "student",
+    "admissionNo": "23B028",
+    "registerId": "PKD23CS030"
+  },
+  {
+    "_id": "69a67804bb97da7e22997d08",
+    "name": "JOBISH JOHNSON",
+    "role": "student",
+    "admissionNo": "23B029",
+    "registerId": "PKD23CS031"
+  },
+  {
+    "_id": "69a67804bb97da7e22997d0b",
+    "name": "J SREELAKSHMI",
+    "role": "student",
+    "admissionNo": "23B030",
+    "registerId": "PKD23CS032"
+  },
+  {
+    "_id": "69a67804bb97da7e22997d0e",
+    "name": "KAVIYA RAJ",
+    "role": "student",
+    "admissionNo": "23B031",
+    "registerId": "PKD23CS033"
+  },
+  {
+    "_id": "69a67804bb97da7e22997d11",
+    "name": "KRISHNA PRIYA K",
+    "role": "student",
+    "admissionNo": "23B032",
+    "registerId": "PKD23CS034"
+  },
+  {
+    "_id": "69a67805bb97da7e22997d14",
+    "name": "KRISHNENDHU S",
+    "role": "student",
+    "admissionNo": "23B033",
+    "registerId": "PKD23CS035"
+  },
+  {
+    "_id": "69a67805bb97da7e22997d17",
+    "name": "LAKSHMI M M",
+    "role": "student",
+    "admissionNo": "23B034",
+    "registerId": "PKD23CS036"
+  },
+  {
+    "_id": "69a67805bb97da7e22997d1a",
+    "name": "MANASA MADHUSOODANAN",
+    "role": "student",
+    "admissionNo": "23B035",
+    "registerId": "PKD23CS037"
+  },
+  {
+    "_id": "69a67805bb97da7e22997d1d",
+    "name": "MOHAMMED ASLAM",
+    "role": "student",
+    "admissionNo": "23B036",
+    "registerId": "PKD23CS038"
+  },
+  {
+    "_id": "69a67805bb97da7e22997d20",
+    "name": "MUHAMMED ANEES V",
+    "role": "student",
+    "admissionNo": "23B037",
+    "registerId": "PKD23CS039"
+  },
+  {
+    "_id": "69a67805bb97da7e22997d23",
+    "name": "MUHAMMED FAYIS",
+    "role": "student",
+    "admissionNo": "23B038",
+    "registerId": "PKD23CS040"
+  },
+  {
+    "_id": "69a67806bb97da7e22997d26",
+    "name": "MUHAMMED RISHAD K",
+    "role": "student",
+    "admissionNo": "23B039",
+    "registerId": "PKD23CS041"
+  },
+  {
+    "_id": "69a67806bb97da7e22997d29",
+    "name": "MUHAMMED SAAD",
+    "role": "student",
+    "admissionNo": "23B040",
+    "registerId": "PKD23CS042"
+  },
+  {
+    "_id": "69a67806bb97da7e22997d2c",
+    "name": "NANDANA PRAMOD KUMAR",
+    "role": "student",
+    "admissionNo": "23B041",
+    "registerId": "PKD23CS043"
+  },
+  {
+    "_id": "69a67806bb97da7e22997d2f",
+    "name": "NANDHANA R",
+    "role": "student",
+    "admissionNo": "23B042",
+    "registerId": "PKD23CS044"
+  },
+  {
+    "_id": "69a67806bb97da7e22997d32",
+    "name": "NAVAMI B R",
+    "role": "student",
+    "admissionNo": "23B043",
+    "registerId": "PKD23CS045"
+  },
+  {
+    "_id": "69a67806bb97da7e22997d35",
+    "name": "NEHA M",
+    "role": "student",
+    "admissionNo": "23B044",
+    "registerId": "PKD23CS046"
+  },
+  {
+    "_id": "69a67806bb97da7e22997d38",
+    "name": "NIDHIN BABURAJAN",
+    "role": "student",
+    "admissionNo": "23B045",
+    "registerId": "PKD23CS047"
+  },
+  {
+    "_id": "69a67807bb97da7e22997d3b",
+    "name": "NILFA KT",
+    "role": "student",
+    "admissionNo": "23B046",
+    "registerId": "PKD23CS048"
+  },
+  {
+    "_id": "69a67807bb97da7e22997d3e",
+    "name": "PARTHIV KRISHNA",
+    "role": "student",
+    "admissionNo": "23B047",
+    "registerId": "PKD23CS049"
+  },
+  {
+    "_id": "69a67807bb97da7e22997d41",
+    "name": "PARVATHY M M",
+    "role": "student",
+    "admissionNo": "23B048",
+    "registerId": "PKD23CS050"
+  },
+  {
+    "_id": "69a67807bb97da7e22997d44",
+    "name": "RINSHA V",
+    "role": "student",
+    "admissionNo": "23B049",
+    "registerId": "PKD23CS051"
+  },
+  {
+    "_id": "69a67807bb97da7e22997d47",
+    "name": "RINSHIFA K",
+    "role": "student",
+    "admissionNo": "23B050",
+    "registerId": "PKD23CS052"
+  },
+  {
+    "_id": "69a67807bb97da7e22997d4a",
+    "name": "RISVANA FARHATH A",
+    "role": "student",
+    "admissionNo": "23B051",
+    "registerId": "PKD23CS053"
+  },
+  {
+    "_id": "69a67808bb97da7e22997d4d",
+    "name": "RONNIE RAPPAI",
+    "role": "student",
+    "admissionNo": "23B052",
+    "registerId": "PKD23CS054"
+  },
+  {
+    "_id": "69a67808bb97da7e22997d50",
+    "name": "SABARI S",
+    "role": "student",
+    "admissionNo": "23B053",
+    "registerId": "PKD23CS055"
+  },
+  {
+    "_id": "69a67808bb97da7e22997d53",
+    "name": "SAFIYA BALKEES M",
+    "role": "student",
+    "admissionNo": "23B054",
+    "registerId": "PKD23CS056"
+  },
+  {
+    "_id": "69a67808bb97da7e22997d56",
+    "name": "SANDRA ANEESH",
+    "role": "student",
+    "admissionNo": "23B055",
+    "registerId": "PKD23CS057"
+  },
+  {
+    "_id": "69a67808bb97da7e22997d59",
+    "name": "SHIFNA AM",
+    "role": "student",
+    "admissionNo": "23B056",
+    "registerId": "PKD23CS058"
+  },
+  {
+    "_id": "69a67808bb97da7e22997d5c",
+    "name": "SINAJ P S",
+    "role": "student",
+    "admissionNo": "23B057",
+    "registerId": "PKD23CS059"
+  },
+  {
+    "_id": "69a67808bb97da7e22997d5f",
+    "name": "SONALI SUNISH",
+    "role": "student",
+    "admissionNo": "23B058",
+    "registerId": "PKD23CS060"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d62",
+    "name": "SREEDEV PRADEEPAN V P",
+    "role": "student",
+    "admissionNo": "23B059",
+    "registerId": "PKD23CS061"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d65",
+    "name": "SREESHMA V",
+    "role": "student",
+    "admissionNo": "23B060",
+    "registerId": "PKD23CS063"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d68",
+    "name": "UDAYAN P",
+    "role": "student",
+    "admissionNo": "23B061",
+    "registerId": "PKD23CS064"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d6b",
+    "name": "VARUN M P",
+    "role": "student",
+    "admissionNo": "23B062",
+    "registerId": "PKD23CS065"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d6e",
+    "name": "VISHNU K P",
+    "role": "student",
+    "admissionNo": "23B063",
+    "registerId": "PKD23CS066"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d71",
+    "name": "VISHNU PRAKASH P K",
+    "role": "student",
+    "admissionNo": "23B064",
+    "registerId": "PKD23CS067"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d74",
+    "name": "CHRISTY OUSEPH",
+    "role": "student",
+    "admissionNo": "23B065",
+    "registerId": "LPKD23CS068"
+  },
+  {
+    "_id": "69a67809bb97da7e22997d77",
+    "name": "MOHAMMED SHAHID S",
+    "role": "student",
+    "admissionNo": "23B066",
+    "registerId": "LPKD23CS069"
+  },
+  {
+    "_id": "69a6780abb97da7e22997d7a",
+    "name": "RHITHUNATH K",
+    "role": "student",
+    "admissionNo": "23B067",
+    "registerId": "LPKD23CS070"
+  },
+  {
+    "_id": "69a6780abb97da7e22997d7d",
+    "name": "SALMANUL FARISI K S",
+    "role": "student",
+    "admissionNo": "23B068",
+    "registerId": "LPKD23CS071"
+  },
+  {
+    "_id": "69a6780abb97da7e22997d80",
+    "name": "AKHIL DAS E",
+    "role": "student",
+    "admissionNo": "23B069",
+    "registerId": "LPKD23CS072"
+  },
+  {
+    "_id": "69a6780abb97da7e22997d83",
+    "name": "SEETHAL SASEENDRAN N",
+    "role": "student",
+    "admissionNo": "23B070",
+    "registerId": "LPKD23CS073"
+  },
+  {
+    "_id": "69a6780abb97da7e22997d86",
+    "name": "SWATHY KRISHNA P",
+    "role": "student",
+    "admissionNo": "23B071",
+    "registerId": "LPKD23CS074"
+  }
+]

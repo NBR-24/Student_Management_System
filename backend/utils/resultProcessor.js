@@ -52,7 +52,12 @@ const getCourseCredits = (code, lookup) => {
             }
         }
     }
-    return 0; // Default if not found
+
+    // Heuristic Fallback
+    if (clean.startsWith('MCN') || clean.startsWith('HUN')) return 0; // Mandatory Non Credit
+    if (clean.includes('L') && !clean.startsWith('HUT')) return 2; // Labs
+    if (clean.endsWith('01') || clean.endsWith('03') || clean.endsWith('05')) return 4; // Core subjects
+    return 3; // Default 3 credits
 };
 
 const processedData = async (buffer) => {

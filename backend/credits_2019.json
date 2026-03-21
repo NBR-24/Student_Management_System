@@ -29,6 +29,47 @@
                             "credits": 3
                         }
                     ]
+                },
+                {
+                    "id": "S5",
+                    "courses": [
+                        {
+                            "code": "CST301",
+                            "credits": 4
+                        },
+                        {
+                            "code": "CST303",
+                            "credits": 4
+                        },
+                        {
+                            "code": "CST305",
+                            "credits": 4
+                        },
+                        {
+                            "code": "CST307",
+                            "credits": 3
+                        },
+                        {
+                            "code": "CST309",
+                            "credits": 3
+                        },
+                        {
+                            "code": "CSL331",
+                            "credits": 2
+                        },
+                        {
+                            "code": "CSL333",
+                            "credits": 2
+                        },
+                        {
+                            "code": "HUT300",
+                            "credits": 3
+                        },
+                        {
+                            "code": "MCN301",
+                            "credits": 0
+                        }
+                    ]
                 }
             ]
         },
