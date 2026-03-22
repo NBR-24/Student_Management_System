@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, User, Book, CreditCard, Bell, ChevronRight, GraduationCap, Trophy, FileText } from 'lucide-react';
+import { LogOut, User, Book, CreditCard, Bell, ChevronRight, GraduationCap, Trophy, FileText, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const StudentHome = () => {
@@ -71,6 +71,7 @@ const StudentHome = () => {
                         { icon: User, label: 'Profile', color: 'text-violet-600', bg: 'bg-violet-50', path: '/student' },
                         { icon: Book, label: 'Courses', color: 'text-pink-600', bg: 'bg-pink-50', path: '/student' },
                         { icon: Trophy, label: 'Results', color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/student/results' },
+                        { icon: ClipboardList, label: 'Requests', color: 'text-blue-600', bg: 'bg-blue-50', path: '/student/requests' },
                         { icon: FileText, label: 'Assign.', color: 'text-amber-600', bg: 'bg-amber-50', path: '/student/assignments' },
                     ].map((item, idx) => (
                         <div key={idx} onClick={() => navigate(item.path)} className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center justify-center aspect-square active:scale-95 transition-transform cursor-pointer">

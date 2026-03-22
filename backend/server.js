@@ -133,6 +133,8 @@ app.get('/debug-results', async (req, res) => {
 
 app.use('/api/student', require('./routes/student'));
 app.use('/api/academic', require('./routes/academic'));
+app.use('/api/request', require('./routes/request'));
+
 
 app.get('/', (req, res) => {
     res.send('Student Management System API is running');

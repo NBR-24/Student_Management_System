@@ -3,6 +3,7 @@ import axios from '../../api/axios';
 import { Upload, Plus, Users, LogOut, FileText, ChevronRight, GraduationCap, LayoutDashboard, CheckSquare, X, Trash2, Edit2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import TeacherResults from './Results';
+import PendingRequests from './PendingRequests';
 
 const TeacherDashboard = () => {
     const { logout } = useAuth();
@@ -378,6 +379,8 @@ const TeacherDashboard = () => {
                 return renderDashboard();
             case 'university-results':
                 return <TeacherResults batches={batches} />;
+            case 'requests':
+                return <PendingRequests />;
             default:
                 return renderDashboard();
         }
@@ -400,6 +403,7 @@ const TeacherDashboard = () => {
                     {[
                         { id: 'manage-batches', label: 'Manage Batches', icon: LayoutDashboard },
                         { id: 'university-results', label: 'University Results', icon: CheckSquare },
+                        { id: 'requests', label: 'Requests', icon: FileText },
                     ].map(item => (
                         <button
                             key={item.id}
@@ -437,7 +441,7 @@ const TeacherDashboard = () => {
                 <header className="sticky top-0 z-10 bg-[#F5F7FA]/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-extrabold text-gray-900 capitalize text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600">
-                            {activeTab === 'manage-batches' ? 'Manage Batches' : 'University Results'}
+                            {activeTab === 'manage-batches' ? 'Manage Batches' : activeTab === 'requests' ? 'Pending Requests' : 'University Results'}
                         </h1>
                         <p className="text-sm text-gray-500 font-medium mt-0.5">Welcome back, Professor</p>
                     </div>
