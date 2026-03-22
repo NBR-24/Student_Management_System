@@ -1,12 +1,14 @@
 # Dependencies
 node_modules/
 
-# Environment variables
+# Environment variables (root + nested)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env
+backend/.env.*
 
 # Logs
 npm-debug.log*
