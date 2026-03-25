@@ -254,8 +254,9 @@ exports.downloadBatchResult = async (req, res) => {
 
         const rawStudents = results.map(r => {
             const regId = (r.registerId || r.student?.registerId || '').trim();
-            // Extract dept from registerId e.g. PKD24CE001 → CE (chars index 5-6)
-            const dept = regId.length >= 7 ? regId.substring(5, 7).toUpperCase() : 'XX';
+            // Extract dept from registerId safely using regex (handles LPKD, IDK, etc.)
+            const deptMatch = regId.match(/\d{2}([A-Z]{2,3})\d{3}/i);
+            const dept = deptMatch ? deptMatch[1].toUpperCase() : 'XX';
             const grades = {};
             r.subjects.forEach(sub => { grades[sub.subCode] = sub.grade; });
             const isPass = !r.subjects.some(sub => failedGrades.includes(sub.grade));
@@ -306,8 +307,9 @@ exports.downloadResultExcelGlobal = async (req, res) => {
 
         const rawStudents = results.map(r => {
             const regId = (r.registerId || r.student?.registerId || '').trim();
-            // Extract dept from registerId e.g. PKD24CE001 → CE (chars index 5-6)
-            const dept = regId.length >= 7 ? regId.substring(5, 7).toUpperCase() : 'XX';
+            // Extract dept from registerId safely using regex (handles LPKD, IDK, etc.)
+            const deptMatch = regId.match(/\d{2}([A-Z]{2,3})\d{3}/i);
+            const dept = deptMatch ? deptMatch[1].toUpperCase() : 'XX';
             // Build grades map for backward-compat AND pass full subjects (with course names)
             const grades = {};
             r.subjects.forEach(sub => { grades[sub.subCode] = sub.grade; });
@@ -560,8 +562,22 @@ exports.getBatchResultAnalysis = async (req, res) => {
 
         if (!results.length) return res.json(null);
 
+        // Filter to Regular Students only
+        const yearCounts = {};
+        results.forEach(r => {
+            const yM = (r.registerId || '').match(/\d{2}/);
+            const y = yM ? yM[0] : '00';
+            r.admissionYear = y;
+            yearCounts[y] = (yearCounts[y] || 0) + 1;
+        });
+        let majorityYear = null, maxCount = 0;
+        for (const y in yearCounts) {
+            if (yearCounts[y] > maxCount) { maxCount = yearCounts[y]; majorityYear = y; }
+        }
+        const regularResults = results.filter(r => r.admissionYear === majorityYear);
+
         // 1. Top 10 Performers
-        const topPerformers = [...results]
+        const topPerformers = [...regularResults]
             .sort((a, b) => b.sgpa - a.sgpa)
             .slice(0, 10)
             .map(r => ({
@@ -577,7 +593,7 @@ exports.getBatchResultAnalysis = async (req, res) => {
         // 3. Subject-wise Analysis
         const subjectStats = {};
 
-        results.forEach(r => {
+        regularResults.forEach(r => {
             let isStudentFailed = false;
             r.subjects.forEach(sub => {
                 if (!subjectStats[sub.subCode]) {
@@ -625,8 +641,22 @@ exports.getCollegeResultAnalysis = async (req, res) => {
 
         if (!results.length) return res.json(null);
 
+        // Filter to Regular Students only
+        const yearCounts = {};
+        results.forEach(r => {
+            const yM = (r.registerId || '').match(/\d{2}/);
+            const y = yM ? yM[0] : '00';
+            r.admissionYear = y;
+            yearCounts[y] = (yearCounts[y] || 0) + 1;
+        });
+        let majorityYear = null, maxCount = 0;
+        for (const y in yearCounts) {
+            if (yearCounts[y] > maxCount) { maxCount = yearCounts[y]; majorityYear = y; }
+        }
+        const regularResults = results.filter(r => r.admissionYear === majorityYear);
+
         // 1. Top 10 Performers (Across Entire College)
-        const topPerformers = [...results]
+        const topPerformers = [...regularResults]
             .filter(r => r.sgpa > 0)
             .sort((a, b) => b.sgpa - a.sgpa)
             .slice(0, 10)
@@ -643,7 +673,7 @@ exports.getCollegeResultAnalysis = async (req, res) => {
         // 3. Per-department breakdown (inferred from registerId: PKD24CE001 → CE)
         const deptStats = {};
 
-        results.forEach(r => {
+        regularResults.forEach(r => {
             let isStudentFailed = false;
 
             r.subjects.forEach(sub => {
@@ -661,9 +691,10 @@ exports.getCollegeResultAnalysis = async (req, res) => {
             if (isStudentFailed) failed++;
             else passed++;
 
-            // Extract dept code from registerId (e.g. PKD24CE001 → CE)
+            // Extract dept code from registerId safely using regex
             const regId = r.registerId || '';
-            const deptCode = regId.length >= 7 ? regId.substring(5, 7) : 'XX';
+            const deptMatch = regId.match(/\d{2}([A-Z]{2,3})\d{3}/i);
+            const deptCode = deptMatch ? deptMatch[1].toUpperCase() : 'XX';
             if (!deptStats[deptCode]) deptStats[deptCode] = { dept: deptCode, pass: 0, fail: 0, total: 0 };
             deptStats[deptCode].total++;
             if (isStudentFailed) deptStats[deptCode].fail++;
@@ -671,7 +702,7 @@ exports.getCollegeResultAnalysis = async (req, res) => {
         });
 
         res.json({
-            totalStudents: results.length,
+            totalStudents: regularResults.length,
             topPerformers,
             passFail: [
                 { name: 'Passed', value: passed },
@@ -720,10 +751,10 @@ exports.getDepartmentResultAnalysis = async (req, res) => {
                 ? Result.find({ ...baseQuery, batch: { $in: batchIds } }).populate('student', 'name registerId').populate('batch', 'name')
                 : Promise.resolve([]),
 
-            // Strategy 2: By registerId pattern — PKD21IT068, LPKD20IT065 both normalised to PKD prefix
+            // Strategy 2: By registerId pattern — Match any prefix (PKD, LPKD, IDK) + 2 digits + department
             Result.find({
                 ...baseQuery,
-                registerId: { $regex: new RegExp(`^PKD\\d{2}${department}\\d+`, 'i') }
+                registerId: { $regex: new RegExp(`^[a-zA-Z]+\\d{2}${department}\\d+`, 'i') }
             }).populate('student', 'name registerId').populate('batch', 'name')
         ]);
 
@@ -739,8 +770,22 @@ exports.getDepartmentResultAnalysis = async (req, res) => {
 
         if (!results.length) return res.json(null);
 
+        // Filter to Regular Students only
+        const yearCounts = {};
+        results.forEach(r => {
+            const yM = (r.registerId || '').match(/\d{2}/);
+            const y = yM ? yM[0] : '00';
+            r.admissionYear = y;
+            yearCounts[y] = (yearCounts[y] || 0) + 1;
+        });
+        let majorityYear = null, maxCount = 0;
+        for (const y in yearCounts) {
+            if (yearCounts[y] > maxCount) { maxCount = yearCounts[y]; majorityYear = y; }
+        }
+        const regularResults = results.filter(r => r.admissionYear === majorityYear);
+
         // 1. Top 10 Performers
-        const topPerformers = [...results]
+        const topPerformers = [...regularResults]
             .filter(r => r.sgpa > 0)
             .sort((a, b) => b.sgpa - a.sgpa)
             .slice(0, 10)
@@ -754,7 +799,7 @@ exports.getDepartmentResultAnalysis = async (req, res) => {
         let passed = 0, failed = 0;
         const subjectStats = {};
 
-        results.forEach(r => {
+        regularResults.forEach(r => {
             let isStudentFailed = false;
             r.subjects.forEach(sub => {
                 if (!subjectStats[sub.subCode]) {
@@ -778,7 +823,7 @@ exports.getDepartmentResultAnalysis = async (req, res) => {
 
         res.json({
             department,
-            totalStudents: results.length,
+            totalStudents: regularResults.length,
             topPerformers,
             passFail: [
                 { name: 'Passed', value: passed },
