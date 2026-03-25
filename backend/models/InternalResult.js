@@ -15,17 +15,28 @@ const InternalResultSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // Scheme used for this record ('2019' or '2024')
+    scheme: { type: String, default: '2019' },
+
+    // Raw input marks (2019 scheme)
     attendancePercentage: { type: Number, default: 0 },
     test1: { type: Number, default: 0 },
     test2: { type: Number, default: 0 },
     assignment1: { type: Number, default: 0 },
     assignment2: { type: Number, default: 0 },
 
-    // Calculated finals
+    // Raw input marks (2024 scheme)
+    series1: { type: Number, default: 0 }, // Series 1 out of 40
+    series2: { type: Number, default: 0 }, // Series 2 out of 40
+
+    // Calculated finals (2019 scheme)
     internalAttendance: { type: Number, default: 0 }, // Out of 10
     internalTests: { type: Number, default: 0 }, // Out of 25
     internalAssignments: { type: Number, default: 0 }, // Out of 15
-    total: { type: Number, default: 0 }, // Out of 50
+    total: { type: Number, default: 0 }, // Out of 50 (2019) or 40 (2024)
+
+    // Calculated finals (2024 scheme)
+    internalSeries: { type: Number, default: 0 }, // Out of 20
 
     publishedBy: {
         type: mongoose.Schema.Types.ObjectId,

@@ -216,20 +216,39 @@ exports.downloadInternalTemplate = async (req, res) => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Internal Marks');
 
-        // Setup Headers
-        worksheet.columns = [
-            { header: 'Roll No', key: 'roll', width: 15 },
-            { header: 'Name', key: 'name', width: 25 },
-            { header: 'Attendance Percentage', key: 'att', width: 22 },
-            { header: 'Test1 (50)', key: 't1', width: 12 },
-            { header: 'Test2 (50)', key: 't2', width: 12 },
-            { header: 'Assignment 1 (15)', key: 'a1', width: 18 },
-            { header: 'Assignment 2 (15)', key: 'a2', width: 18 },
-            { header: 'Attendance (10)', key: 'calcAtt', width: 16 },
-            { header: 'Tests (25)', key: 'calcTests', width: 12 },
-            { header: 'Assignments (15)', key: 'calcAssign', width: 18 },
-            { header: 'Total (50)', key: 'calcTotal', width: 12 }
-        ];
+        const is2024 = batch.scheme === '2024';
+
+        // Setup Headers based on scheme
+        if (is2024) {
+            // 2024 scheme: Attendance(5) + Series1(40) + Series2(40) + Assignment(15) = 40 total
+            worksheet.columns = [
+                { header: 'Roll No', key: 'roll', width: 15 },
+                { header: 'Name', key: 'name', width: 25 },
+                { header: 'Attendance Percentage', key: 'att', width: 22 },
+                { header: 'Series 1 (40)', key: 's1', width: 14 },
+                { header: 'Series 2 (40)', key: 's2', width: 14 },
+                { header: 'Assignment (15)', key: 'a1', width: 18 },
+                { header: 'Attendance (5)', key: 'calcAtt', width: 16 },
+                { header: 'Series (20)', key: 'calcSeries', width: 13 },
+                { header: 'Assignments (15)', key: 'calcAssign', width: 18 },
+                { header: 'Total (40)', key: 'calcTotal', width: 12 }
+            ];
+        } else {
+            // 2019 scheme: Attendance(10) + Tests(25) + Assignments(15) = 50 total
+            worksheet.columns = [
+                { header: 'Roll No', key: 'roll', width: 15 },
+                { header: 'Name', key: 'name', width: 25 },
+                { header: 'Attendance Percentage', key: 'att', width: 22 },
+                { header: 'Test1 (50)', key: 't1', width: 12 },
+                { header: 'Test2 (50)', key: 't2', width: 12 },
+                { header: 'Assignment 1 (15)', key: 'a1', width: 18 },
+                { header: 'Assignment 2 (15)', key: 'a2', width: 18 },
+                { header: 'Attendance (10)', key: 'calcAtt', width: 16 },
+                { header: 'Tests (25)', key: 'calcTests', width: 12 },
+                { header: 'Assignments (15)', key: 'calcAssign', width: 18 },
+                { header: 'Total (50)', key: 'calcTotal', width: 12 }
+            ];
+        }
 
         // Style headers
         worksheet.getRow(1).font = { bold: true };
@@ -244,20 +263,39 @@ exports.downloadInternalTemplate = async (req, res) => {
 
         sortedStudents.forEach((student, index) => {
             const rowIdx = index + 2;
-            worksheet.addRow({
-                roll: student.registerId || student.admissionNo,
-                name: student.name,
-                calcAtt: { formula: `IF(ISBLANK(C${rowIdx}), "", ROUND((C${rowIdx}/100)*10, 1))` },
-                calcTests: { formula: `IF(AND(ISBLANK(D${rowIdx}), ISBLANK(E${rowIdx})), "", ROUND((SUM(D${rowIdx},E${rowIdx}))/100*25, 1))` },
-                calcAssign: { formula: `IF(AND(ISBLANK(F${rowIdx}), ISBLANK(G${rowIdx})), "", ROUND(AVERAGE(F${rowIdx},G${rowIdx}), 1))` },
-                calcTotal: { formula: `IF(AND(ISBLANK(H${rowIdx}), ISBLANK(I${rowIdx}), ISBLANK(J${rowIdx})), "", ROUND(SUM(H${rowIdx},I${rowIdx},J${rowIdx}), 0))` }
-            });
-            // Style readonly columns
-            worksheet.getCell(`H${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
-            worksheet.getCell(`I${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
-            worksheet.getCell(`J${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
-            worksheet.getCell(`K${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4E6F1' } };
-            worksheet.getCell(`K${rowIdx}`).font = { bold: true };
+            if (is2024) {
+                // 2024 scheme columns: A=Roll, B=Name, C=Att%, D=Series1, E=Series2, F=Assignment
+                // Calculated: G=Att(5), H=Series(20), I=Assign(15), J=Total(40)
+                worksheet.addRow({
+                    roll: student.registerId || student.admissionNo,
+                    name: student.name,
+                    calcAtt: { formula: `IF(ISBLANK(C${rowIdx}), "", ROUND((C${rowIdx}/100)*5, 1))` },
+                    calcSeries: { formula: `IF(AND(ISBLANK(D${rowIdx}), ISBLANK(E${rowIdx})), "", ROUND((SUM(D${rowIdx},E${rowIdx}))/80*20, 1))` },
+                    calcAssign: { formula: `IF(ISBLANK(F${rowIdx}), "", ROUND(F${rowIdx}, 1))` },
+                    calcTotal: { formula: `IF(AND(ISBLANK(G${rowIdx}), ISBLANK(H${rowIdx}), ISBLANK(I${rowIdx})), "", ROUND(SUM(G${rowIdx},H${rowIdx},I${rowIdx}), 0))` }
+                });
+                worksheet.getCell(`G${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+                worksheet.getCell(`H${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+                worksheet.getCell(`I${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+                worksheet.getCell(`J${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4E6F1' } };
+                worksheet.getCell(`J${rowIdx}`).font = { bold: true };
+            } else {
+                // 2019 scheme columns: A=Roll, B=Name, C=Att%, D=Test1, E=Test2, F=Assign1, G=Assign2
+                // Calculated: H=Att(10), I=Tests(25), J=Assign(15), K=Total(50)
+                worksheet.addRow({
+                    roll: student.registerId || student.admissionNo,
+                    name: student.name,
+                    calcAtt: { formula: `IF(ISBLANK(C${rowIdx}), "", ROUND((C${rowIdx}/100)*10, 1))` },
+                    calcTests: { formula: `IF(AND(ISBLANK(D${rowIdx}), ISBLANK(E${rowIdx})), "", ROUND((SUM(D${rowIdx},E${rowIdx}))/100*25, 1))` },
+                    calcAssign: { formula: `IF(AND(ISBLANK(F${rowIdx}), ISBLANK(G${rowIdx})), "", ROUND(AVERAGE(F${rowIdx},G${rowIdx}), 1))` },
+                    calcTotal: { formula: `IF(AND(ISBLANK(H${rowIdx}), ISBLANK(I${rowIdx}), ISBLANK(J${rowIdx})), "", ROUND(SUM(H${rowIdx},I${rowIdx},J${rowIdx}), 0))` }
+                });
+                worksheet.getCell(`H${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+                worksheet.getCell(`I${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+                worksheet.getCell(`J${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+                worksheet.getCell(`K${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4E6F1' } };
+                worksheet.getCell(`K${rowIdx}`).font = { bold: true };
+            }
         });
 
         const buffer = await workbook.xlsx.writeBuffer();
@@ -296,65 +334,87 @@ exports.uploadInternalmarks = async (req, res) => {
         }
 
         let updatedCount = 0;
+        const is2024 = batch.scheme === '2024';
 
         for (const row of sheetData) {
             const rollNo = row['Roll No'];
-            const attPerc = parseFloat(row['Attendance Percentage']) || 0;
-            const t1 = parseFloat(row['Test1 (50)']) || 0;
-            const t2 = parseFloat(row['Test2 (50)']) || 0;
-
-            let a1 = row['Assignment 1 (15)'];
-            let a2 = row['Assignment 2 (15)'];
-
-            // Allow backward compatibility with old template
-            if (a1 === undefined) a1 = row['Assignment 1'];
-            if (a2 === undefined) a2 = row['Assignment 2'];
-
             if (!rollNo) continue;
 
             const student = batch.students.find(s => s.registerId === String(rollNo) || s.admissionNo === String(rollNo));
             if (!student) continue;
 
-            const internalAttendance = (attPerc / 100) * 10;
-            const internalTests = ((t1 + t2) / 100) * 25;
+            const attPerc = parseFloat(row['Attendance Percentage']) || 0;
+            let updateData = { attendancePercentage: attPerc, publishedBy: req.user.userId, scheme: batch.scheme };
 
-            // Assignment Averaging
-            let sumAssignments = 0;
-            let numAssignments = 0;
-            let parsedA1 = 0;
-            let parsedA2 = 0;
-            if (a1 !== undefined && a1 !== '') {
-                parsedA1 = parseFloat(a1) || 0;
-                sumAssignments += parsedA1;
-                numAssignments++;
-            }
-            if (a2 !== undefined && a2 !== '') {
-                parsedA2 = parseFloat(a2) || 0;
-                sumAssignments += parsedA2;
-                numAssignments++;
-            }
-            const internalAssignments = numAssignments > 0 ? (sumAssignments / numAssignments) : 0;
+            if (is2024) {
+                // 2024 scheme: Attendance(5) + Series(20) + Assignment(15) = 40 total
+                const s1 = parseFloat(row['Series 1 (40)']) || 0;
+                const s2 = parseFloat(row['Series 2 (40)']) || 0;
+                const assignment = parseFloat(row['Assignment (15)']) || 0;
 
-            const finalAttendance = parseFloat(internalAttendance.toFixed(1));
-            const finalTests = parseFloat(internalTests.toFixed(1));
-            const finalAssignments = parseFloat(internalAssignments.toFixed(1));
-            const total = Math.round(finalAttendance + finalTests + finalAssignments);
+                const internalAttendance = parseFloat(((attPerc / 100) * 5).toFixed(1));
+                const internalSeries = parseFloat(((s1 + s2) / 80 * 20).toFixed(1));
+                const internalAssignments = parseFloat(assignment.toFixed(1));
+                const total = Math.round(internalAttendance + internalSeries + internalAssignments);
+
+                Object.assign(updateData, {
+                    series1: s1,
+                    series2: s2,
+                    // assignment1 is reused to store the single assignment mark for 2024 scheme
+                    assignment1: assignment,
+                    internalAttendance,
+                    internalSeries,
+                    internalAssignments,
+                    total
+                });
+            } else {
+                // 2019 scheme: Attendance(10) + Tests(25) + Assignments(15) = 50 total
+                const t1 = parseFloat(row['Test1 (50)']) || 0;
+                const t2 = parseFloat(row['Test2 (50)']) || 0;
+                let a1 = row['Assignment 1 (15)'];
+                let a2 = row['Assignment 2 (15)'];
+
+                // Allow backward compatibility with old template
+                if (a1 === undefined) a1 = row['Assignment 1'];
+                if (a2 === undefined) a2 = row['Assignment 2'];
+
+                const internalAttendance = parseFloat(((attPerc / 100) * 10).toFixed(1));
+                const internalTests = parseFloat(((t1 + t2) / 100 * 25).toFixed(1));
+
+                // Assignment averaging
+                let sumAssignments = 0;
+                let numAssignments = 0;
+                let parsedA1 = 0;
+                let parsedA2 = 0;
+                if (a1 !== undefined && a1 !== '') {
+                    parsedA1 = parseFloat(a1) || 0;
+                    sumAssignments += parsedA1;
+                    numAssignments++;
+                }
+                if (a2 !== undefined && a2 !== '') {
+                    parsedA2 = parseFloat(a2) || 0;
+                    sumAssignments += parsedA2;
+                    numAssignments++;
+                }
+                const internalAssignments = parseFloat((numAssignments > 0 ? sumAssignments / numAssignments : 0).toFixed(1));
+                const total = Math.round(internalAttendance + internalTests + internalAssignments);
+
+                Object.assign(updateData, {
+                    test1: t1,
+                    test2: t2,
+                    assignment1: parsedA1,
+                    assignment2: parsedA2,
+                    internalAttendance,
+                    internalTests,
+                    internalAssignments,
+                    total
+                });
+            }
 
             // Upsert
             await InternalResult.findOneAndUpdate(
                 { student: student._id, batch: batchId, subject: subject },
-                {
-                    attendancePercentage: attPerc,
-                    test1: t1,
-                    test2: t2,
-                    assignment1: a1,
-                    assignment2: a2,
-                    internalAttendance: finalAttendance,
-                    internalTests: finalTests,
-                    internalAssignments: finalAssignments,
-                    total: total,
-                    publishedBy: req.user.userId
-                },
+                updateData,
                 { upsert: true, new: true }
             );
             updatedCount++;
