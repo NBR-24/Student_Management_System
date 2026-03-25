@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, User, Book, CreditCard, Bell, ChevronRight, GraduationCap, Trophy, FileText, ClipboardList } from 'lucide-react';
-import { LogOut, User, Book, CreditCard, Bell, ChevronRight, GraduationCap, Trophy, FileText, CheckCircle } from 'lucide-react';
+import { LogOut, User, Book, CreditCard, Bell, ChevronRight, GraduationCap, Trophy, FileText, ClipboardList, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const StudentHome = () => {
