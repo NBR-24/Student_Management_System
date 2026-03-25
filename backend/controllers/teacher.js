@@ -202,3 +202,170 @@ exports.getBatchDetails = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+exports.downloadInternalTemplate = async (req, res) => {
+    try {
+        const { batchId } = req.params;
+        const { subject } = req.query;
+        if (!subject) return res.status(400).json({ message: 'Subject query parameter is required' });
+
+        const batch = await Batch.findById(batchId).populate('students', 'name registerId admissionNo');
+        if (!batch) return res.status(404).json({ message: 'Batch not found' });
+
+        const ExcelJS = require('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Internal Marks');
+
+        // Setup Headers
+        worksheet.columns = [
+            { header: 'Roll No', key: 'roll', width: 15 },
+            { header: 'Name', key: 'name', width: 25 },
+            { header: 'Attendance Percentage', key: 'att', width: 22 },
+            { header: 'Test1 (50)', key: 't1', width: 12 },
+            { header: 'Test2 (50)', key: 't2', width: 12 },
+            { header: 'Assignment 1 (15)', key: 'a1', width: 18 },
+            { header: 'Assignment 2 (15)', key: 'a2', width: 18 },
+            { header: 'Attendance (10)', key: 'calcAtt', width: 16 },
+            { header: 'Tests (25)', key: 'calcTests', width: 12 },
+            { header: 'Assignments (15)', key: 'calcAssign', width: 18 },
+            { header: 'Total (50)', key: 'calcTotal', width: 12 }
+        ];
+
+        // Style headers
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE8F3FD' }
+        };
+
+        // Sort students logically by registerId or rollNo
+        const sortedStudents = batch.students.sort((a, b) => (a.registerId || '').localeCompare(b.registerId || ''));
+
+        sortedStudents.forEach((student, index) => {
+            const rowIdx = index + 2;
+            worksheet.addRow({
+                roll: student.registerId || student.admissionNo,
+                name: student.name,
+                calcAtt: { formula: `IF(ISBLANK(C${rowIdx}), "", ROUND((C${rowIdx}/100)*10, 1))` },
+                calcTests: { formula: `IF(AND(ISBLANK(D${rowIdx}), ISBLANK(E${rowIdx})), "", ROUND((SUM(D${rowIdx},E${rowIdx}))/100*25, 1))` },
+                calcAssign: { formula: `IF(AND(ISBLANK(F${rowIdx}), ISBLANK(G${rowIdx})), "", ROUND(AVERAGE(F${rowIdx},G${rowIdx}), 1))` },
+                calcTotal: { formula: `IF(AND(ISBLANK(H${rowIdx}), ISBLANK(I${rowIdx}), ISBLANK(J${rowIdx})), "", ROUND(SUM(H${rowIdx},I${rowIdx},J${rowIdx}), 0))` }
+            });
+            // Style readonly columns
+            worksheet.getCell(`H${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            worksheet.getCell(`I${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            worksheet.getCell(`J${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+            worksheet.getCell(`K${rowIdx}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD4E6F1' } };
+            worksheet.getCell(`K${rowIdx}`).font = { bold: true };
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        res.setHeader('Content-Disposition', `attachment; filename="Internal_Template.xlsx"`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+exports.uploadInternalmarks = async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const { batchId } = req.params;
+    const { subject } = req.body;
+
+    if (!subject) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ message: 'Subject is required in body form-data' });
+    }
+
+    const InternalResult = require('../models/InternalResult');
+
+    try {
+        const workbook = xlsx.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        const batch = await Batch.findById(batchId).populate('students');
+        if (!batch) {
+            fs.unlinkSync(req.file.path);
+            return res.status(404).json({ message: 'Batch not found' });
+        }
+
+        let updatedCount = 0;
+
+        for (const row of sheetData) {
+            const rollNo = row['Roll No'];
+            const attPerc = parseFloat(row['Attendance Percentage']) || 0;
+            const t1 = parseFloat(row['Test1 (50)']) || 0;
+            const t2 = parseFloat(row['Test2 (50)']) || 0;
+
+            let a1 = row['Assignment 1 (15)'];
+            let a2 = row['Assignment 2 (15)'];
+
+            // Allow backward compatibility with old template
+            if (a1 === undefined) a1 = row['Assignment 1'];
+            if (a2 === undefined) a2 = row['Assignment 2'];
+
+            if (!rollNo) continue;
+
+            const student = batch.students.find(s => s.registerId === String(rollNo) || s.admissionNo === String(rollNo));
+            if (!student) continue;
+
+            const internalAttendance = (attPerc / 100) * 10;
+            const internalTests = ((t1 + t2) / 100) * 25;
+
+            // Assignment Averaging
+            let sumAssignments = 0;
+            let numAssignments = 0;
+            let parsedA1 = 0;
+            let parsedA2 = 0;
+            if (a1 !== undefined && a1 !== '') {
+                parsedA1 = parseFloat(a1) || 0;
+                sumAssignments += parsedA1;
+                numAssignments++;
+            }
+            if (a2 !== undefined && a2 !== '') {
+                parsedA2 = parseFloat(a2) || 0;
+                sumAssignments += parsedA2;
+                numAssignments++;
+            }
+            const internalAssignments = numAssignments > 0 ? (sumAssignments / numAssignments) : 0;
+
+            const finalAttendance = parseFloat(internalAttendance.toFixed(1));
+            const finalTests = parseFloat(internalTests.toFixed(1));
+            const finalAssignments = parseFloat(internalAssignments.toFixed(1));
+            const total = Math.round(finalAttendance + finalTests + finalAssignments);
+
+            // Upsert
+            await InternalResult.findOneAndUpdate(
+                { student: student._id, batch: batchId, subject: subject },
+                {
+                    attendancePercentage: attPerc,
+                    test1: t1,
+                    test2: t2,
+                    assignment1: a1,
+                    assignment2: a2,
+                    internalAttendance: finalAttendance,
+                    internalTests: finalTests,
+                    internalAssignments: finalAssignments,
+                    total: total,
+                    publishedBy: req.user.userId
+                },
+                { upsert: true, new: true }
+            );
+            updatedCount++;
+        }
+
+        fs.unlinkSync(req.file.path);
+        res.json({ message: 'Internal results processed successfully', count: updatedCount });
+
+    } catch (err) {
+        console.error(err);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};

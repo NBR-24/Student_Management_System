@@ -1,0 +1,3 @@
+C:\Users\Navami\OneDrive\Desktop\student management\Student_Management_System\.gitignore
+C:\Users\Navami\OneDrive\Desktop\student management\Student_Management_System\backend\.gitignore
+C:\Users\Navami\OneDrive\Desktop\student management\Student_Management_System\frontend\.gitignore

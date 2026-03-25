@@ -124,11 +124,35 @@ app.get('/debug-users', async (req, res) => {
 
 app.get('/debug-results', async (req, res) => {
     const Result = require('./models/Result');
-    const results = await Result.find({}).sort({ createdAt: -1 }).limit(20);
+    const results = await Result.find({}).sort({ createdAt: -1 });
     res.json({
         count: await Result.countDocuments(),
         results
     });
+});
+
+app.get('/seed-teacher', async (req, res) => {
+    const User = require('./models/User');
+    const bcrypt = require('bcryptjs');
+    try {
+        let teacher = await User.findOne({ email: 'teacher@teacher.com' });
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('teacher123', salt);
+
+        if (!teacher) {
+            teacher = new User({
+                name: 'Test Teacher',
+                email: 'teacher@teacher.com',
+                role: 'teacher',
+                department: 'CSE'
+            });
+        }
+        teacher.password = hashedPassword;
+        await teacher.save();
+        res.json({ message: 'Teacher password forcefully reset', email: 'teacher@teacher.com', password: 'teacher123' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.use('/api/student', require('./routes/student'));

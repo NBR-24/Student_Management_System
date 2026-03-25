@@ -1,0 +1,4 @@
+﻿origin	https://github.com/mhdaslamp/Student_Management_System.git (fetch)
+origin	https://github.com/mhdaslamp/Student_Management_System.git (push)
+upstream	https://github.com/mhdaslamp/Student_Management_System.git (fetch)
+upstream	https://github.com/mhdaslamp/Student_Management_System.git (push)

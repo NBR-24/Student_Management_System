@@ -3,6 +3,7 @@ import axios from '../../api/axios';
 import { Upload, Plus, Users, LogOut, FileText, ChevronRight, GraduationCap, LayoutDashboard, CheckSquare, X, Trash2, Edit2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import TeacherResults from './Results';
+import TeacherInternalResults from './InternalResults';
 
 const TeacherDashboard = () => {
     const { logout } = useAuth();
@@ -378,6 +379,8 @@ const TeacherDashboard = () => {
                 return renderDashboard();
             case 'university-results':
                 return <TeacherResults batches={batches} />;
+            case 'internal-results':
+                return <TeacherInternalResults batches={batches} />;
             default:
                 return renderDashboard();
         }
@@ -400,6 +403,7 @@ const TeacherDashboard = () => {
                     {[
                         { id: 'manage-batches', label: 'Manage Batches', icon: LayoutDashboard },
                         { id: 'university-results', label: 'University Results', icon: CheckSquare },
+                        { id: 'internal-results', label: 'Internal Results', icon: FileText },
                     ].map(item => (
                         <button
                             key={item.id}

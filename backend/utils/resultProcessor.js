@@ -395,4 +395,89 @@ const generateExcel = async (processedData) => {
     return buffer;
 };
 
-module.exports = { processedData, generateExcel };
+const calculateManualSGPA = (subjects, title) => {
+    // 1. Detect Metadata
+    const { semester, scheme } = detectMetadata(title);
+
+    // 2. Load JSON
+    const jsonPath = path.join(__dirname, `../credits_${scheme}.json`);
+    let fullJsonData = {};
+    try {
+        const raw = fs.readFileSync(jsonPath);
+        fullJsonData = JSON.parse(raw);
+    } catch (e) {
+        console.warn(`Credit file not found for scheme ${scheme}, using empty defaults.`);
+    }
+
+    let semesterTotals = fullJsonData.semester_total_credits || {};
+    if (Object.keys(semesterTotals).length === 0 && fullJsonData.departments) {
+        const firstDept = fullJsonData.departments[0];
+        if (firstDept && firstDept.semesters) {
+            firstDept.semesters.forEach(s => {
+                semesterTotals[`S${s.semester}`] = s.total_credit;
+            });
+        }
+    }
+
+    const creditLookup = {};
+    const curriculaList = fullJsonData.curricula || fullJsonData.departments || [];
+    curriculaList.forEach(dept => {
+        (dept.semesters || []).forEach(sem => {
+            (sem.courses || []).forEach(course => {
+                const code = course.code || course.course_code;
+                const credit = course.credits || course.credit;
+                if (code) {
+                    creditLookup[code.replace(/\s/g, '')] = credit;
+                }
+            });
+        });
+    });
+
+    let officialDenom = 0;
+    const studentCodes = new Set(subjects.map(c => c.subCode.replace(/\s/g, '')));
+
+    if (fullJsonData.departments || fullJsonData.curricula) {
+        const deptList = fullJsonData.departments || fullJsonData.curricula;
+        const semNum = parseInt(semester.replace('S', ''), 10);
+
+        for (const deptData of deptList) {
+            const semData = deptData.semesters?.find(s => s.semester === semNum);
+            if (!semData) continue;
+            const deptCodes = (semData.courses || []).map(c => (c.code || c.course_code || '').replace(/\s/g, ''));
+            const overlap = deptCodes.filter(dc => studentCodes.has(dc)).length;
+            if (overlap > 0) {
+                officialDenom = semData.total_credit;
+                break;
+            }
+        }
+    }
+
+    if (!officialDenom) officialDenom = semesterTotals[semester] || 0;
+    if (!officialDenom) officialDenom = (scheme === '2024' && semester === 'S2') ? 24 : 21;
+
+    const failGrades = ['F', 'FE', 'I', 'ABSENT', 'WITHHELD'];
+    const isPass = !subjects.some(g => failGrades.includes((g.grade || '').toUpperCase()));
+
+    let totalWeightedPoints = 0;
+    let totalCreds = 0;
+
+    for (const sub of subjects) {
+        const cleanCode = (sub.subCode || '').replace(/\s/g, '');
+        const grade = (sub.grade || '').toUpperCase().replace(/\s/g, '');
+        const creds = getCourseCredits(cleanCode, creditLookup);
+        const gp = GRADE_POINTS[grade] || 0;
+
+        totalWeightedPoints += creds * gp;
+        if (gp > 0) totalCreds += creds;
+    }
+
+    let sgpa = officialDenom > 0
+        ? parseFloat((totalWeightedPoints / officialDenom).toFixed(2))
+        : 0.0;
+
+    if (sgpa > 10) sgpa = 10.0;
+
+    return { sgpa, totalCredits: totalCreds, isPass };
+};
+
+module.exports = { processedData, generateExcel, calculateManualSGPA };

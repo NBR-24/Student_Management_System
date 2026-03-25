@@ -12,3 +12,17 @@ exports.getMe = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+exports.getInternalResults = async (req, res) => {
+    try {
+        const InternalResult = require('../models/InternalResult');
+        const results = await InternalResult.find({ student: req.user.userId })
+            .populate('batch', 'name branch scheme')
+            .sort({ createdAt: -1 });
+
+        res.json(results);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};

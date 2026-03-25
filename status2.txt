@@ -1,0 +1,47 @@
+﻿On branch ui-login
+Your branch is ahead of 'origin/ui-login' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	deleted:    README.md
+	deleted:    SDD.md
+	deleted:    SDD.md.resolved
+	deleted:    SDD2.md
+	deleted:    SINAJ P S - SDD_Template.pdf
+	deleted:    SRS.md
+	deleted:    SRS.md.resolved
+	deleted:    backend/check_batches.js
+	deleted:    backend/check_db_data.js
+	deleted:    backend/check_results_persistence.js
+	deleted:    backend/cleanup_results.js
+	deleted:    backend/controllers/academic_temp_append.js
+	deleted:    backend/debug_results.js
+	deleted:    backend/test_login.js
+	deleted:    backend/test_out.txt
+	deleted:    backend/test_pdf.js
+	modified:   frontend/src/pages/admin/Dashboard.jsx
+	deleted:    frontend/src/pages/exam_controller/Dashboard.jsx
+	deleted:    frontend/src/pages/student/Home.jsx
+	deleted:    frontend/src/pages/teacher/ResultAnalysis.jsx
+	deleted:    now give the document , strict to the format..docx
+	deleted:    now give the document , strict to the format..pdf
+	deleted:    source.zip
+	deleted:    srs_template-ieee.docx
+	deleted:    srs_template-ieee.pdf
+	deleted:    srs_template.zip
+	deleted:    temp_srs_source/[Content_Types].xml
+	deleted:    temp_srs_source/_rels/.rels
+	deleted:    temp_srs_source/docProps/app.xml
+	deleted:    temp_srs_source/docProps/core.xml
+	deleted:    temp_srs_source/docProps/custom.xml
+	deleted:    temp_srs_source/word/_rels/document.xml.rels
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	envs.txt
+	ignores.txt
+	status2.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

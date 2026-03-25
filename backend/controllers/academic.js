@@ -2,12 +2,22 @@ const Result = require('../models/Result');
 const Assignment = require('../models/Assignment');
 const User = require('../models/User');
 const Batch = require('../models/Batch'); // Added
-const { processedData, generateExcel } = require('../utils/resultProcessor');
+const { processedData, generateExcel, calculateManualSGPA } = require('../utils/resultProcessor');
 
 // --- Results ---
 exports.addResult = async (req, res) => {
     try {
         const { studentId, batchId, type, title, subjects } = req.body;
+
+        // Recalculate SGPA for Manual Uploads inherently
+        let sgpa = 0;
+        let totalCredits = 0;
+
+        if (type === 'university' || type === 'University') {
+            const metrics = calculateManualSGPA(subjects || [], title || '');
+            sgpa = metrics.sgpa;
+            totalCredits = metrics.totalCredits;
+        }
 
         const result = new Result({
             student: studentId,
@@ -15,6 +25,8 @@ exports.addResult = async (req, res) => {
             type,
             title,
             subjects,
+            sgpa,
+            totalCredits,
             publishedBy: req.user.userId
         });
 
@@ -141,7 +153,7 @@ const uploadResultPDF = async (req, res) => {
         // 2. Pre-fetch all student accounts in ONE bulk query and attach names to rawStudents
         const allRegIds = rawStudents.map(s => s.registerId.trim());
         const foundUsers = await User.find({ registerId: { $in: allRegIds } })
-                                     .select('name registerId batch _id');
+            .select('name registerId batch _id');
         // Build lookup map: UPPERCASE registerId → User doc
         const userMap = {};
         foundUsers.forEach(u => { userMap[u.registerId.trim().toUpperCase()] = u; });
@@ -167,12 +179,12 @@ const uploadResultPDF = async (req, res) => {
                 subjects: studentData.subjects
                     ? studentData.subjects.map(s => ({
                         subCode: s.code,
-                        name:    s.name,
-                        grade:   s.grade
+                        name: s.name,
+                        grade: s.grade
                     }))
                     : Object.entries(studentData.grades).map(([code, grade]) => ({
                         subCode: code,
-                        name:    code,
+                        name: code,
                         grade
                     })),
                 sgpa: studentData.sgpa,
@@ -190,8 +202,8 @@ const uploadResultPDF = async (req, res) => {
                 updateOne: {
                     filter: {
                         registerId: resultPayload.registerId,
-                        type:       resultPayload.type,
-                        title:      resultPayload.title
+                        type: resultPayload.type,
+                        title: resultPayload.title
                     },
                     update: { $set: resultPayload },
                     upsert: true
@@ -310,10 +322,10 @@ exports.downloadResultExcelGlobal = async (req, res) => {
                 grades,
                 // Pass full subjects so generateExcel can use course names in headers
                 subjects: r.subjects.map(sub => ({
-                    code:        sub.subCode,
-                    name:        sub.name || sub.subCode,
-                    grade:       sub.grade,
-                    credit:      0,
+                    code: sub.subCode,
+                    name: sub.name || sub.subCode,
+                    grade: sub.grade,
+                    credit: 0,
                     gradePoints: 0
                 }))
             };

@@ -101,7 +101,7 @@ const Login = () => {
                     </form>
 
                     <p className="mt-8 text-center text-xs text-gray-400">
-                        &copy; 2024 Student Management System
+                        &copy; 2026 Student Management System
                     </p>
                 </div>
             </div>

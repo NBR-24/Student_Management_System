@@ -1,0 +1,1 @@
+C:\Users\Navami\OneDrive\Desktop\student management\Student_Management_System\backend\.env

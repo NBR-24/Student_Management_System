@@ -1,0 +1,18 @@
+﻿branch 'main' set up to track 'origin/main'.
+Your branch is up to date with 'origin/main'.
+git : Switched to and reset 
+branch 'main'
+At line:1 char:1
++ git checkout -B main 
+origin/main 2>&1 | Out-File 
+-FilePath checkout.t ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (Switc  
+  hed to and reset branch   
+  'main':String) [], Rem    
+oteException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
