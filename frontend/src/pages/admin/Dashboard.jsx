@@ -89,7 +89,8 @@ const AdminDashboard = () => {
     const roleLabels = {
         teacher: 'Teachers',
         exam_controller: 'Exam Controllers',
-        hod: 'HODs'
+        hod: 'HODs',
+        principal: 'Principals'
     };
 
     return (

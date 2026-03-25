@@ -132,17 +132,20 @@ const processedData = async (buffer) => {
 
         // FIX: Match ALL register number prefixes used in KTU PDFs:
         //   - PKD21IT068   (regular)
-        //   - LPKD20IT065  (lateral entry — LP prefix)
-        //   - IDK19IT017   (other college — IDK prefix)
-        // We always normalise to the PKD... core for storage.
-        const regNoPattern = /(?:LP|IDK)?(PKD\d{2}[A-Z]{2,3}\d{3})/g;
+        //   - LPKD20IT065  (lateral entry)
+        //   - IDK19IT017   (other college)
+        const regNoPattern = /([A-Z]+\d{2}[A-Z]{2,3}\d{3})/gi;
 
         let match;
         const studentIndices = [];
         while ((match = regNoPattern.exec(fullText)) !== null) {
+            const fullRegNo = match[1].toUpperCase();
+            const deptMatch = fullRegNo.match(/\d{2}([A-Z]{2,3})\d{3}/);
+            const deptCode = deptMatch ? deptMatch[1] : 'XX';
+
             studentIndices.push({
-                regNo: match[1],           // normalised: PKD21IT068
-                dept: match[1].substring(5, 7), // e.g. IT
+                regNo: fullRegNo,            // exact original register number
+                dept: deptCode,              // safely extracted dept code
                 start: match.index,
                 end: 0
             });
@@ -264,6 +267,28 @@ const generateExcel = async (processedData) => {
     const { rawStudents, metadata } = processedData;
     const { examName, semester, scheme } = metadata;
 
+    // Calculate majority year to determine regular vs supply for this exam
+    const yearCounts = {};
+    rawStudents.forEach(s => {
+        const yearMatch = (s.registerId || '').match(/\d{2}/);
+        const year = yearMatch ? yearMatch[0] : '00';
+        s.admissionYear = year;
+        yearCounts[year] = (yearCounts[year] || 0) + 1;
+    });
+
+    let majorityYear = null;
+    let maxCount = 0;
+    for (const year in yearCounts) {
+        if (yearCounts[year] > maxCount) {
+            maxCount = yearCounts[year];
+            majorityYear = year;
+        }
+    }
+    
+    rawStudents.forEach(s => {
+        s.studentType = (s.admissionYear === majorityYear) ? 'Regular' : 'Supply';
+    });
+
     const workbook = new ExcelJS.Workbook();
 
     // Group by Dept
@@ -280,33 +305,6 @@ const generateExcel = async (processedData) => {
         const sheetName = `${dept}_Analysis`;
         const worksheet = workbook.addWorksheet(sheetName);
 
-        // Metadata Header
-        worksheet.mergeCells('A1:E1');
-        worksheet.getCell('A1').value = `EXAMINATION: ${examName}`;
-        worksheet.getCell('A1').font = { bold: true, size: 12 };
-
-        worksheet.mergeCells('A2:E2');
-        worksheet.getCell('A2').value = `SEMESTER: ${semester} | SCHEME: ${scheme}`;
-        worksheet.getCell('A2').font = { bold: true, size: 11 };
-
-        worksheet.mergeCells('A3:E3');
-        worksheet.getCell('A3').value = `DEPARTMENT: ${dept}`;
-        worksheet.getCell('A3').font = { bold: true, size: 11 };
-
-        // Statistics
-        const totalS = studentList.length;
-        const passS = studentList.filter(s => s.isPass).length;
-        const failS = totalS - passS;
-        const passPerc = totalS > 0 ? ((passS / totalS) * 100).toFixed(2) : 0;
-
-        worksheet.mergeCells('A5:E5');
-        worksheet.getCell('A5').value = "OVERALL PERFORMANCE ANALYSIS";
-        worksheet.getCell('A5').font = { bold: true, color: { argb: 'FF000000' } };
-
-        worksheet.mergeCells('A6:E6');
-        worksheet.getCell('A6').value = `Total Students: ${totalS} | Pass: ${passS} | Fail: ${failS} | Pass%: ${passPerc}%`;
-        worksheet.getCell('A6').font = { bold: true };
-
         // Collect all distinct courses for this dept + build code→name map for headers
         const allCourses = new Set();
         const codeToName = {};
@@ -317,24 +315,122 @@ const generateExcel = async (processedData) => {
             });
         });
         const deptCourses = Array.from(allCourses).sort();
+        const lastColIndex = 6 + deptCourses.length;
+
+        // Metadata Header
+        worksheet.mergeCells(1, 1, 1, lastColIndex);
+        const cellA1 = worksheet.getCell(1, 1);
+        cellA1.value = `EXAMINATION: ${examName}`;
+        cellA1.font = { bold: true, size: 12 };
+        cellA1.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellA1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } }; // Light Blue
+
+        worksheet.mergeCells(2, 1, 2, lastColIndex);
+        const cellA2 = worksheet.getCell(2, 1);
+        cellA2.value = `SEMESTER: ${semester} | SCHEME: ${scheme}`;
+        cellA2.font = { bold: true, size: 11 };
+        cellA2.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellA2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } }; // Light Blue
+
+        worksheet.mergeCells(3, 1, 3, lastColIndex);
+        const cellA3 = worksheet.getCell(3, 1);
+        cellA3.value = `DEPARTMENT: ${dept}`;
+        cellA3.font = { bold: true, size: 11 };
+        cellA3.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellA3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } }; // Light Blue
+
+        // Statistics (Based ONLY on Regular Students)
+        const regularStudents = studentList.filter(s => s.studentType === 'Regular');
+
+        const totalS = regularStudents.length;
+        const passS = regularStudents.filter(s => s.isPass).length;
+        const failS = totalS - passS;
+        const passPerc = totalS > 0 ? ((passS / totalS) * 100).toFixed(2) : 0;
+
+        worksheet.mergeCells(5, 1, 5, lastColIndex);
+        const cellA5 = worksheet.getCell(5, 1);
+        cellA5.value = "OVERALL PERFORMANCE ANALYSIS (REGULAR STUDENTS)";
+        cellA5.font = { bold: true, color: { argb: 'FF000000' } };
+        cellA5.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellA5.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } }; // Light Yellow
+
+        worksheet.mergeCells(6, 1, 6, lastColIndex);
+        const cellA6 = worksheet.getCell(6, 1);
+        cellA6.value = `Total Students: ${totalS} | Pass: ${passS} | Fail: ${failS} | Pass%: ${passPerc}%`;
+        cellA6.font = { bold: true };
+        cellA6.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellA6.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+
+        const regularCount = studentList.filter(s => s.studentType === 'Regular').length;
+        const supplyCount = studentList.filter(s => s.studentType === 'Supply').length;
+        worksheet.mergeCells(7, 1, 7, lastColIndex);
+        const cellA7 = worksheet.getCell(7, 1);
+        cellA7.value = `Regular Students: ${regularCount} | Supply Students: ${supplyCount}`;
+        cellA7.font = { bold: true, color: { argb: 'FF0000FF' } };
+        cellA7.alignment = { horizontal: 'center', vertical: 'middle' };
+        cellA7.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+
+        worksheet.mergeCells(8, 1, 8, lastColIndex);
+        const cellA8 = worksheet.getCell(8, 1);
+        cellA8.value = "Note: Analysis is based on the regular students";
+        cellA8.font = { italic: true, color: { argb: 'FFFF0000' } };
+        cellA8.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        // Sort students: Regular first, then Supply
+        studentList.sort((a, b) => {
+            if (a.studentType === 'Regular' && b.studentType !== 'Regular') return -1;
+            if (a.studentType !== 'Regular' && b.studentType === 'Regular') return 1;
+            return a.registerId.localeCompare(b.registerId);
+        });
 
         // Table Header — show "CODE – Course Name" if name is available
         const headerRow = [
             'Register No',
             'Student Name',
+            'Student Type',
             ...deptCourses.map(c => codeToName[c] ? `${c} – ${codeToName[c]}` : c),
             'Total Credits', 'SGPA', 'Result'
         ];
-        const tableStartRow = 9;
+        const tableStartRow = 10;
         const headerCellRow = worksheet.getRow(tableStartRow);
         headerCellRow.values = headerRow;
-        headerCellRow.font = { bold: true };
+
+        // Apply column widths for readability (narrowed as per request)
+        worksheet.getColumn(1).width = 16; // Register No
+        worksheet.getColumn(2).width = 25; // Student Name
+        worksheet.getColumn(3).width = 15; // Student Type
+        
+        // Course columns
+        for (let i = 1; i <= deptCourses.length; i++) {
+             worksheet.getColumn(3 + i).width = 12; // Adjusted for grades
+        }
+        worksheet.getColumn(4 + deptCourses.length).width = 15; // Total Credits
+        worksheet.getColumn(5 + deptCourses.length).width = 10; // SGPA
+        worksheet.getColumn(6 + deptCourses.length).width = 12; // Result
+
+        // Style table headers: purple background, white font, and outer border
+        headerCellRow.eachCell((cell, colNumber) => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // White text
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF800080' } // Purple background
+            };
+            cell.border = {
+                top: { style: 'medium' },
+                bottom: { style: 'thin', color: { argb: 'FFEFEFEF' } },
+                left: colNumber === 1 ? { style: 'medium' } : { style: 'thin', color: { argb: 'FFEFEFEF' } },
+                right: colNumber === lastColIndex ? { style: 'medium' } : { style: 'thin', color: { argb: 'FFEFEFEF' } }
+            };
+        });
 
         // Data Rows
         studentList.forEach((s, idx) => {
             const rowData = [
                 s.registerId,
                 s.name || '-',   // Student Name (from DB lookup if available)
+                s.studentType,   // Student Type (Regular/Supply)
             ];
             deptCourses.forEach(c => {
                 rowData.push(s.grades[c] || '-');
@@ -345,6 +441,24 @@ const generateExcel = async (processedData) => {
 
             const row = worksheet.getRow(tableStartRow + 1 + idx);
             row.values = rowData;
+
+            // Apply readable inner borders, thick outer borders, and alignment to data rows
+            const isLastRow = idx === studentList.length - 1;
+            row.eachCell((cell, colNumber) => {
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFEFEFEF' } },
+                    bottom: isLastRow ? { style: 'medium' } : { style: 'thin', color: { argb: 'FFEFEFEF' } },
+                    left: colNumber === 1 ? { style: 'medium' } : { style: 'thin', color: { argb: 'FFEFEFEF' } },
+                    right: colNumber === lastColIndex ? { style: 'medium' } : { style: 'thin', color: { argb: 'FFEFEFEF' } }
+                };
+                
+                // Keep Register No, Student Name, Student Type left-aligned, otherwise center
+                if (colNumber <= 3) {
+                    cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                } else {
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                }
+            });
 
             // Conditional Formatting for Result
             const resultColIndex = rowData.length;
@@ -360,25 +474,50 @@ const generateExcel = async (processedData) => {
 
         // --- Toppers Analysis ---
         let currentRow = lastRow + 3;
-        worksheet.getCell(`A${currentRow}`).value = "TOP 10 PERFORMERS";
-        worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF0000FF' } }; // Blue
+        worksheet.mergeCells(currentRow, 1, currentRow, 3);
+        const toppersHeader = worksheet.getCell(currentRow, 1);
+        toppersHeader.value = "TOP 10 PERFORMERS (REGULAR)";
+        toppersHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // White
+        toppersHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF800080' } }; // Purple
+        toppersHeader.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        const toppers = studentList.filter(s => s.isPass).sort((a, b) => b.sgpa - a.sgpa).slice(0, 10);
+        currentRow++;
+        worksheet.getCell(`A${currentRow}`).value = "Rank & Reg No";
+        worksheet.getCell(`B${currentRow}`).value = "SGPA";
+        worksheet.getCell(`C${currentRow}`).value = "Student Name";
+        ['A', 'B', 'C'].forEach(col => {
+            worksheet.getCell(`${col}${currentRow}`).font = { bold: true };
+            worksheet.getCell(`${col}${currentRow}`).border = { bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } } };
+        });
+
+        const toppers = regularStudents.filter(s => s.isPass).sort((a, b) => b.sgpa - a.sgpa).slice(0, 10);
         toppers.forEach((t, i) => {
             currentRow++;
             worksheet.getCell(`A${currentRow}`).value = `${i + 1}. ${t.registerId}`;
-            worksheet.getCell(`B${currentRow}`).value = `SGPA: ${t.sgpa}`;
-            worksheet.getCell(`C${currentRow}`).value = t.name || '';
+            worksheet.getCell(`B${currentRow}`).value = t.sgpa;
+            worksheet.getCell(`C${currentRow}`).value = t.name || 'Name not found';
         });
 
         // --- Subject Failure Analysis ---
-        currentRow += 2;
-        worksheet.getCell(`A${currentRow}`).value = "SUBJECT-WISE FAILURE ANALYSIS";
-        worksheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FFFF0000' } }; // Red
+        currentRow += 3;
+        worksheet.mergeCells(currentRow, 1, currentRow, 3);
+        const failureHeader = worksheet.getCell(currentRow, 1);
+        failureHeader.value = "SUBJECT-WISE FAILURE ANALYSIS (REGULAR)";
+        failureHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } }; // White
+        failureHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF800080' } }; // Purple
+        failureHeader.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        currentRow++;
+        worksheet.getCell(`A${currentRow}`).value = "Course";
+        worksheet.getCell(`B${currentRow}`).value = "Failures";
+        ['A', 'B'].forEach(col => {
+            worksheet.getCell(`${col}${currentRow}`).font = { bold: true };
+            worksheet.getCell(`${col}${currentRow}`).border = { bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } } };
+        });
 
         deptCourses.forEach((code, i) => {
             currentRow++;
-            const failCount = studentList.filter(s => {
+            const failCount = regularStudents.filter(s => {
                 const g = s.grades[code];
                 return g && ['F', 'FE', 'I', 'ABSENT'].includes(g);
             }).length;

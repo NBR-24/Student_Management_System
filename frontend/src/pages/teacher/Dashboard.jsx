@@ -3,10 +3,12 @@ import axios from '../../api/axios';
 import { Upload, Plus, Users, LogOut, FileText, ChevronRight, GraduationCap, LayoutDashboard, CheckSquare, X, Trash2, Edit2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import TeacherResults from './Results';
+import PendingRequests from './PendingRequests';
 import TeacherInternalResults from './InternalResults';
 
 const TeacherDashboard = () => {
-    const { logout } = useAuth();
+    const { user, logout } = useAuth();
+    const isTeacher = user?.role === 'teacher';
     const [activeTab, setActiveTab] = useState('manage-batches');
     const [batches, setBatches] = useState([]);
     const [newBatch, setNewBatch] = useState({ name: '', scheme: '2024' });
@@ -120,6 +122,7 @@ const TeacherDashboard = () => {
     const renderDashboard = () => (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column: Actions */}
+            {isTeacher && (
             <div className="lg:col-span-1 space-y-8">
                 {/* Create Batch Card */}
                 <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
@@ -224,9 +227,10 @@ const TeacherDashboard = () => {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* Right Column: Batches List */}
-            <div className="lg:col-span-2">
+            <div className={`lg:col-span-2 ${!isTeacher ? 'lg:col-span-3' : ''}`}>
                 <div className="flex justify-between items-end mb-6">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">Active Batches</h2>
@@ -348,6 +352,7 @@ const TeacherDashboard = () => {
                                             <td className="px-4 py-3 font-medium text-gray-900">{student.name}</td>
                                             <td className="px-4 py-3 text-gray-600 font-mono text-xs">{student.admissionNo}</td>
                                             <td className="px-4 py-3 text-right">
+                                                {isTeacher && (
                                                 <div className="flex justify-end space-x-2">
                                                     <button onClick={() => startEditStudent(student)} className="p-1.5 text-[#1A8AE5] hover:bg-blue-50 rounded-lg">
                                                         <Edit2 className="h-4 w-4" />
@@ -356,6 +361,7 @@ const TeacherDashboard = () => {
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -379,6 +385,8 @@ const TeacherDashboard = () => {
                 return renderDashboard();
             case 'university-results':
                 return <TeacherResults batches={batches} />;
+            case 'requests':
+                return <PendingRequests />;
             case 'internal-results':
                 return <TeacherInternalResults batches={batches} />;
             default:
@@ -403,6 +411,7 @@ const TeacherDashboard = () => {
                     {[
                         { id: 'manage-batches', label: 'Manage Batches', icon: LayoutDashboard },
                         { id: 'university-results', label: 'University Results', icon: CheckSquare },
+                        { id: 'requests', label: 'Requests', icon: FileText },
                         { id: 'internal-results', label: 'Internal Results', icon: FileText },
                     ].map(item => (
                         <button
@@ -441,7 +450,7 @@ const TeacherDashboard = () => {
                 <header className="sticky top-0 z-10 bg-[#F5F7FA]/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-extrabold text-gray-900 capitalize text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600">
-                            {activeTab === 'manage-batches' ? 'Manage Batches' : 'University Results'}
+                            {activeTab === 'manage-batches' ? 'Manage Batches' : activeTab === 'requests' ? 'Pending Requests' : 'University Results'}
                         </h1>
                         <p className="text-sm text-gray-500 font-medium mt-0.5">Welcome back, Professor</p>
                     </div>
@@ -532,6 +541,7 @@ const TeacherDashboard = () => {
                                             <td className="px-4 py-3.5 font-medium text-gray-900">{student.name}</td>
                                             <td className="px-4 py-3.5 text-gray-500 font-mono text-xs">{student.admissionNo}</td>
                                             <td className="px-4 py-3.5 text-right">
+                                                {isTeacher && (
                                                 <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => startEditStudent(student)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                                                         <Edit2 className="h-4 w-4" />
@@ -540,6 +550,7 @@ const TeacherDashboard = () => {
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}

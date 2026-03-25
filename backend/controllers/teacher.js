@@ -88,9 +88,17 @@ exports.getBatches = async (req, res) => {
     try {
         let query = { createdBy: req.user.userId };
 
-        // Allow Admin, Exam Controller, and HOD to see ALL batches
-        if (['admin', 'exam_controller', 'hod'].includes(req.user.role)) {
+        // Admin and Exam Controller see all batches
+        if (['admin', 'exam_controller', 'principal'].includes(req.user.role)) {
             query = {};
+        } else if (req.user.role === 'hod') {
+            // HOD sees only their department's batches
+            const user = await User.findById(req.user.userId);
+            if (user && user.department) {
+                query = { branch: new RegExp(`^${user.department}$`, 'i') };
+            } else {
+                query = { _id: null }; // No department assigned, block access
+            }
         }
 
         const batches = await Batch.find(query);

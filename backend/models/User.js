@@ -16,11 +16,19 @@ const UserSchema = new mongoose.Schema({
         required: true
     },
     department: {
-        type: String, // Specific to teachers
+        type: String,
+    },
+    designation: {
+        type: String,
+        enum: ['teacher', 'tutor', 'hod'],
+        default: 'teacher'
+    },
+    phone: {
+        type: String,
     },
     role: {
         type: String,
-        enum: ['admin', 'teacher', 'student', 'exam_controller', 'hod'],
+        enum: ['admin', 'teacher', 'student', 'exam_controller', 'hod', 'principal'],
         required: true
     },
     // Specific to students
